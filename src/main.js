@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
+import * as Colyseus from "colyseus.js";
 
 // O jogo foi afinado com o fluxo de cor e as luzes "clássicos" (sem conversão sRGB, intensidades não físicas).
 // O Three.js r160 é a última versão que ainda tem `useLegacyLights`, por isso fica fixada em 0.160.1.
@@ -18,6 +19,10 @@ class JogoRenderer extends THREE.WebGLRenderer {
 
 window.THREE = Object.assign({}, THREE, { WebGLRenderer: JogoRenderer, GLTFLoader, SkeletonUtils });
 
+window.Colyseus = Colyseus;
+// Endereço do servidor online: VITE_SERVIDOR_ONLINE (ex.: wss://girabola.exemplo.com); por omissão, a mesma máquina, porta 2567
+if (import.meta.env.VITE_SERVIDOR_ONLINE) window.GIRABOLA_SERVIDOR = import.meta.env.VITE_SERVIDOR_ONLINE;
+
 const base = import.meta.env.BASE_URL;
 const scripts = [
   "legacy/game.js",
@@ -29,7 +34,8 @@ const scripts = [
   "legacy/var-system.js",
   "legacy/fit-engine.js",
   "modelos/multidao.js",
-  "legacy/crowd-hooks.js"
+  "legacy/crowd-hooks.js",
+  "legacy/online.js"
 ];
 for (const src of scripts) {
   const s = document.createElement("script");
