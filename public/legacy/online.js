@@ -28,17 +28,23 @@ function ecraPerfil() {
     '<div class="opt"><span class="panel-title">O teu nome</span><input id="oNome" maxlength="16" autocomplete="off" placeholder="Nome de jogador" value="' + esc(p.nome) + '" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4d7088;background:#0c1a2a;color:#eef4fa;font:600 18px system-ui"><p class="note" id="oErro" style="color:#ff8a8a"></p></div>' +
     '<div class="grid" id="oGrid">' + TEAMS.map(function (t, i) { return '<button class="team" data-i="' + i + '" aria-pressed="' + (i === escolhido) + '">' + crest(i, 64) + '<div style="min-width:0"><b>' + t.n + '</b><span>Força ' + t.r + '</span></div></button>'; }).join("") + '</div>' +
     '<div class="row"><button class="btn" id="oProcurar">Procurar adversário</button></div>' +
+    '<div class="opt"><span class="panel-title">Jogar com um amigo</span><div class="row"><button class="btn ghost" id="oCriar">Criar sala privada</button><input id="oCodigo" maxlength="5" placeholder="CÓDIGO" style="width:120px;padding:10px;border-radius:10px;border:1px solid #4d7088;background:#0c1a2a;color:#eef4fa;font:700 18px system-ui;text-transform:uppercase;text-align:center"><button class="btn ghost" id="oEntrar">Entrar</button></div></div>' +
     '<p class="note">Sem conta: o teu perfil de convidado fica guardado neste dispositivo.</p></section>';
   var marcar = function () { app.querySelectorAll("#oGrid .team").forEach(function (b) { b.setAttribute("aria-pressed", +b.dataset.i === escolhido); b.style.outline = +b.dataset.i === escolhido ? "3px solid #f6c744" : ""; }); };
   marcar();
   app.querySelectorAll("#oGrid .team").forEach(function (b) { b.onclick = function () { escolhido = +b.dataset.i; marcar(); try { sfx("ui"); } catch (e) {} }; });
   document.getElementById("oBack").onclick = showMenu;
-  document.getElementById("oProcurar").onclick = function () {
+  var iniciar = function (modo) {
     var nome = document.getElementById("oNome").value.trim();
     if (nome.length < 2) { document.getElementById("oErro").textContent = "Escolhe um nome com pelo menos 2 letras."; return; }
+    var cod = (document.getElementById("oCodigo").value || "").trim().toUpperCase();
+    if (modo === "entrar" && cod.length < 5) { document.getElementById("oErro").textContent = "Escreve o código de 5 letras."; return; }
     p.nome = nome; p.club = escolhido; guardar(p);
-    procurar(p);
+    procurar(p, modo, cod);
   };
+  document.getElementById("oProcurar").onclick = function () { iniciar(); };
+  document.getElementById("oCriar").onclick = function () { iniciar("criar"); };
+  document.getElementById("oEntrar").onclick = function () { iniciar("entrar"); };
   window.scrollTo(0, 0);
 }
 
@@ -78,7 +84,7 @@ function limpar(fecharTudo) {
 }
 function cancelar() { try { if (ST && ST.fila) ST.fila.send("cancelar"); } catch (e) {} limpar(true); }
 
-function procurar(p) {
+function procurar(p, modo, codigo) {
   limpar(true);
   ST = { perfil: p, tmr: 0, snaps: [], hist: [], off: null, ack: 0, seq: 0, ping: 0 };
   ecraProcura();
@@ -87,7 +93,7 @@ function procurar(p) {
   cli.joinOrCreate("fila", { ver: VERSAO }).then(function (fila) {
     if (!ST) { fila.leave(); return; }
     ST.fila = fila;
-    fila.onMessage("na_fila", function (m) { aviso("Na fila · ELO " + m.elo + " · " + m.online + " à procura"); });
+    fila.onMessage("na_fila", function (m) { aviso("Na fila · ELO " + m.elo + " · " + m.vitorias + "V " + m.empates + "E " + m.derrotas + "D · " + m.online + " à procura"); });
     fila.onMessage("proposta", ecraProposta);
     fila.onMessage("recusou", function () { alert("O adversário não aceitou. Volta a procurar."); ecraPerfil(); });
     fila.onMessage("adversario_saiu", function () { ecraProcura(); aviso("O adversário saiu. A procurar outro…"); fila.send("procurar", { nome: p.nome, club: p.club, id: p.id }); });
@@ -103,7 +109,13 @@ function procurar(p) {
     fila.onMessage("reserva", function (r) { entrarNaPartida(r); });
     fila.onMessage("p", function () {});
     fila.onError(function () { aviso("Erro de ligação ao servidor."); });
-    fila.send("procurar", { nome: p.nome, club: p.club, id: p.id });
+    fila.onMessage("privada_codigo", function (m) {
+      document.getElementById("oTempo").textContent = m.codigo;
+      aviso("Diz este código ao teu amigo. A aguardar que ele entre…");
+    });
+    if (modo === "criar") fila.send("privada_criar", { nome: p.nome, club: p.club, id: p.id });
+    else if (modo === "entrar") fila.send("privada_entrar", { nome: p.nome, club: p.club, id: p.id, codigo: codigo });
+    else fila.send("procurar", { nome: p.nome, club: p.club, id: p.id });
   }).catch(function (e) {
     var msg = (e && e.message) || "";
     alert(/Actualiza/.test(msg) ? "Actualiza o jogo." : "Não foi possível ligar ao servidor online.\n(" + URL_SERVIDOR + ")");
@@ -130,8 +142,15 @@ function ligarSala(sala) {
   sala.onMessage("adv_desligado", function () { aviso2("O adversário perdeu a ligação. A aguardar até 30 s…"); });
   sala.onMessage("adv_voltou", function () { aviso2("O adversário voltou."); setTimeout(function () { aviso2(""); }, 1500); });
   sala.onMessage("p", function (t) { ST.ping = Math.round(performance.now() - t); atualizarPing(); });
+  sala.onMessage("revanche_pedida", function () { var b = document.getElementById("oOutra"); if (b) b.textContent = "Jogar outra vez (o adversário já quer)"; });
+  sala.onMessage("reserva", function (r) {
+    var antigaPref = ST.guardaPref;
+    try { ST.sala.leave(); } catch (e) {}
+    clearInterval(ST.pingTmr); ST.fim = null; ST.snaps = []; ST.hist = []; ST.off = null; ST.ultimo = null; ST.comecou = false; ST.guardaPref = antigaPref;
+    entrarNaPartida(r);
+  });
   sala.onLeave(function (code) { if (ST && !ST.fim && code !== 1000) reconectar(); });
-  ST.pingTmr = setInterval(function () { try { sala.send("p", performance.now()); } catch (e) {} }, 2000);
+  ST.pingTmr = setInterval(function () { try { sala.send("p", performance.now()); if (ST.ping) sala.send("rtt", ST.ping); } catch (e) {} }, 2000);
 }
 
 function reconectar() {
@@ -344,10 +363,14 @@ function mostrarFim(m) {
   var meu = ST.info.lado, eu = m.placar[meu], el = m.placar[1 - meu];
   var res = m.motivo === "abandono" ? (m.vencedor === meu ? "Vitória por abandono" : "Derrota por abandono") : (eu > el ? "Vitória!" : eu < el ? "Derrota" : "Empate");
   var h = '<div class="card"><p class="eyebrow">Fim do jogo</p><h2>' + res + '</h2><div class="bigscore">' + eu + ' – ' + el + '</div>' +
-    '<p class="muted">Remates ' + m.remates[meu] + ' – ' + m.remates[1 - meu] + '</p><div class="row"><button class="btn" id="oMenu">Menu</button></div></div>';
+    '<p class="muted">Remates ' + m.remates[meu] + ' – ' + m.remates[1 - meu] + '</p>' +
+    (m.elo ? '<p class="muted">ELO ' + m.elo.antes + ' → <b>' + m.elo.depois + '</b> (' + (m.elo.depois >= m.elo.antes ? "+" : "") + (m.elo.depois - m.elo.antes) + ')</p>' : '') +
+    '<div class="row"><button class="btn" id="oOutra">Jogar outra vez</button><button class="btn ghost" id="oMenu">Menu</button></div></div>';
   try { showOverlay(h); } catch (e) {}
   var b = document.getElementById("oMenu");
   if (b) b.onclick = function () { sair(); };
+  var o2 = document.getElementById("oOutra");
+  if (o2) o2.onclick = function () { try { ST.sala.send("revanche"); } catch (e) {} o2.disabled = true; o2.textContent = "À espera do adversário…"; };
 }
 function sair() {
   if (ST && ST.guardaPref) { PREF.stadium = ST.guardaPref.stadium; PREF.daytime = ST.guardaPref.daytime; }
