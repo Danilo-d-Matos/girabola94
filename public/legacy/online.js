@@ -240,7 +240,11 @@ function aplicar(s, rt) {
   for (var j = 0; j < n; j++) {
     var pa = a.p[j], pb = c.p[j], g = G.players[idx(j, n)];
     var x = pa.x + (pb.x - pa.x) * al, y = pa.y + (pb.y - pa.y) * al, fx = pa.fx + (pb.fx - pa.fx) * al, fy = pa.fy + (pb.fy - pa.fy) * al;
-    if (j === mi && !ST.semPrev) { var q = prever(s.p[j], s); x = q.x; y = q.y; }
+    if (j === mi && !ST.semPrev) {
+      var q = prever(s.p[j], s), d = ST.disp && ST.dispIdx === j ? ST.disp : null;
+      if (!d || Math.hypot(q.x - d.x, q.y - d.y) > 70) d = { x: q.x, y: q.y }; else { d.x += (q.x - d.x) * .35; d.y += (q.y - d.y) * .35; }
+      ST.disp = d; ST.dispIdx = j; x = d.x; y = d.y;
+    }
     var P = mxy(x, y); g.x = P[0]; g.y = P[1];
     var m = Math.hypot(fx, fy) || 1; fx /= m; fy /= m; g.fx = ST.guest ? -fx : fx; g.fy = ST.guest ? -fy : fy;
     g.vx = ST.guest ? -pb.vx : pb.vx; g.vy = ST.guest ? -pb.vy : pb.vy;
