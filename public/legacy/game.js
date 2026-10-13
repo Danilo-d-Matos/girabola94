@@ -548,7 +548,7 @@ function startSetPiece(kind,team,x,y){
   b.owner=taker;b.lastTeam=team;b.last=taker;
   G.setp={kind,team,x,y,t:0,taker,tx:taker.x,ty:taker.y};
   for(const q of G.players){if(q.off||q.team===team)continue;const d=dist(q,b);if(d<70){const a=Math.atan2(q.y-b.y,q.x-b.x)||0;q.x=clamp(b.x+Math.cos(a)*72,X0+6,X1-6);q.y=clamp(b.y+Math.sin(a)*72,Y0+6,Y1-6)}}
-  if(team===0&&taker.role!=="GK")setCtrl(taker);
+  if(team===0&&(taker.role!=="GK"||kind==="goalkick"))setCtrl(taker);
   sfx("whistle");teamBrain(0);teamBrain(1);
 }
 function stepSetPiece(){
@@ -579,6 +579,7 @@ function stepSetPiece(){
     if(sp.t>.45&&(input.passPressed||input.shootPressed)){
       if(sp.kind==="freekick"&&input.shootPressed)shoot(tk,.65,input.y);
       else if(sp.kind==="corner"&&input.shootPressed)cross(tk,0);
+      else if(sp.kind==="goalkick"&&input.shootPressed){let best=null,bs=-1e9;for(const q of G.players){if(q.off||q.team!==tk.team||q===tk||q.role==="GK")continue;const al=G.aim?((q.x-tk.x)*G.aim.x+(q.y-tk.y)*G.aim.y)/Math.max(1,dist(tk,q)):0,s=nxOf(tk.team,q.x)*3+al*2+(laneClear(tk,q,16)?1:0);if(s>bs){bs=s;best=q}}passTo(tk,best||choosePassTarget(tk),1.2,10.5)}
       else passTo(tk,G.passTarget||choosePassTarget(tk),.6,sp.kind==="throw"?7.5:9.5);
       go=true;
     }else if(sp.t>7){passTo(tk,choosePassTarget(tk),.6,7.5);go=true}
@@ -1016,7 +1017,7 @@ function buildTV(){
   const crowdFrames=buildCrowdFrames(hc,aw,G.teams[home]),cr=crowdFrames[0];
   // placas de publicidade (genéricas)
   const ad=document.createElement("canvas");ad.width=2400;ad.height=40;const a=ad.getContext("2d");
-  const ads=[["GIRABOLA CRAQUE","#151515","#f2b705"],[`${G.stadium.toUpperCase()}`,"#0f2c5c","#ffffff"],["BOLA NO PÉ","#c8102e","#ffffff"],["FUTEBOL ANGOLANO","#1f8a4c","#ffffff"],["JOGO LIMPO","#f2b705","#151515"]];
+  const ads=[["GIRABOLA 94","#151515","#f2b705"],[`${G.stadium.toUpperCase()}`,"#0f2c5c","#ffffff"],["BOLA NO PÉ","#c8102e","#ffffff"],["FUTEBOL ANGOLANO","#1f8a4c","#ffffff"],["JOGO LIMPO","#f2b705","#151515"]];
   a.font='700 24px "Barlow Condensed","Arial Narrow",sans-serif';a.textBaseline="middle";a.textAlign="center";
   for(let i=0;i<8;i++){const [t,b,f]=ads[i%ads.length];a.fillStyle=b;a.fillRect(i*300,0,300,40);a.fillStyle=f;a.fillText(t,i*300+150,21,280);a.fillStyle="rgba(0,0,0,.25)";a.fillRect(i*300+298,0,2,40)}
   // ruído da relva
@@ -1545,7 +1546,7 @@ function showMenu(){
   app.innerHTML=`<section class="screen">
    <div class="hero">
      <div class="flagbar" aria-hidden="true"><i></i><i></i></div>
-     <h1 class="title">Girabola<span>Craque</span></h1>
+     <h1 class="title">Girabola<span>94</span></h1>
      <p class="lede">Escolhe o teu clube da Girabola, entra em campo e leva-o ao título. Partidas de dois minutos e meio de tempo de jogo (ritmo mais calmo no modo Fácil), no telemóvel ou no computador.</p>
      <div class="kits" aria-label="As 16 equipas">${TEAMS.map((t,i)=>`<span class="kit" title="${t.n}">${crest(i,26)}</span>`).join("")}</div>
    </div>
@@ -1650,12 +1651,12 @@ function showPrematch(base){
     const last=step===STEPS.length-1;
     document.getElementById("pwPrev").style.visibility=step?"visible":"hidden";
     const nx=document.getElementById("pwNext")||document.getElementById("qGo");nx.textContent=last?"Entrar em campo":"Seguinte";nx.id=last?"qGo":"pwNext";
-    nx.onclick=last?()=>{ac();launch(o)}:()=>{step++;draw(1)};
+    nx.onclick=last?()=>{ac();(window.launchPre||launch)(o)}:()=>{step++;draw(1)};
   };
   app.querySelectorAll(".pw-step").forEach(s=>s.onclick=()=>{const n=+s.dataset.step;draw(n>=step?1:-1,step=n)});
   on("pwPrev",()=>{if(step){step--;draw(-1)}});
   on("qBack",()=>o.mode==="season"?showHub():showPick("quick2",o.L));
-  on("pwSkip",()=>{ac();launch(o)});
+  on("pwSkip",()=>{ac();(window.launchPre||launch)(o)});
   draw(0);
   window.scrollTo(0,0);
 }
@@ -1771,7 +1772,7 @@ function showData(state){
      <div class="row"><button class="btn small" id="exCopy">Copiar</button><button class="btn ghost small" id="exDl">Descarregar ficheiro .json</button><span class="note" id="exMsg"></span></div>`:`<p class="muted">Ainda não há nenhuma época para exportar.</p>`}
    </div>
    <div class="panel"><p class="panel-title">Importar</p>
-     <p class="note">Escolhe um ficheiro exportado pelo Girabola Craque ou cola o texto JSON. O jogo verifica os dados antes de substituir alguma coisa.</p>
+     <p class="note">Escolhe um ficheiro exportado pelo Girabola 94 ou cola o texto JSON. O jogo verifica os dados antes de substituir alguma coisa.</p>
      <input type="file" id="imFile" accept=".json,application/json">
      <textarea id="imTxt" placeholder="Cola aqui o JSON da época" aria-label="JSON a importar"></textarea>
      <div class="row"><button class="btn small" id="imCheck">Verificar</button></div>

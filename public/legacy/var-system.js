@@ -187,11 +187,11 @@ function penCamCalc(){
     else if(G.shoot){on=true;team=G.shoot.kickTeam}
     else if(now<(G.penCamUntil||0)&&G.state!=="replay"){on=true;team=G.penCamTeam||0}
   }
-  var sp=G&&G.state==="setpiece"&&G.setp&&G.setp.team===0&&G.setp.taker===G.ctrl&&!G.auto&&!G.shoot,spT=null;
-  if(sp){on=true;team=0;var k=G.setp.kind,s0=sd(0)===0;spT=k==="corner"?{x:s0?X1-70:X0+70,y:H/2}:(k==="throw"?{x:G.setp.x,y:H/2}:(k==="goalkick"?{x:W/2,y:H/2}:{x:s0?X1:X0,y:H/2}))}
+  var sp=G&&G.state==="setpiece"&&G.setp&&(G.setp.kind==="freekick"||G.setp.kind==="corner"||G.setp.kind==="goalkick")&&G.setp.team===0&&G.setp.taker===G.ctrl&&!G.auto&&!G.shoot,spT=null;   // só nos livres: nos cantos, lançamentos e pontapés de baliza a câmara ficaria dentro da bancada
+  if(sp){on=true;team=0;var k=G.setp.kind,s0=sd(0)===0;spT=k==="corner"?{x:s0?X1-70:X0+70,y:H/2,back:52,h:34}:(k==="throw"?{x:G.setp.x,y:H/2}:(k==="goalkick"?{x:W/2,y:H/2,back:78,h:52}:{x:s0?X1:X0,y:H/2}))}
   if(PREF.camera==="top")on=false;
   var fkB=spT?{x:G.setp.taker.x,y:G.setp.taker.y}:(G&&G.state==="pen"&&G.pen&&G.pen.fk)?{x:G.pen.bx,y:G.pen.by}:(G&&G.penCamB&&now<(G.penCamUntil||0)?G.penCamB:null);
-  window.__penCam=on?{on:true,gx:sd(team)===0?X1:X0,dir:sd(team)===0?1:-1,bx:fkB?fkB.x:null,by:fkB?fkB.y:null,tx:spT?spT.x:null,ty:spT?spT.y:null}:{on:false};
+  window.__penCam=on?{on:true,gx:sd(team)===0?X1:X0,dir:sd(team)===0?1:-1,bx:fkB?fkB.x:null,by:fkB?fkB.y:null,tx:spT?spT.x:null,ty:spT?spT.y:null,back:spT&&spT.back||null,hh:spT&&spT.h||null}:{on:false};
 }
 var _uc=updateCam;
 updateCam=function(){var r=_uc.apply(this,arguments);try{penCamCalc()}catch(e){}return r};
@@ -270,12 +270,12 @@ function penCardGfx(c){
       if(P){c.strokeStyle="rgba(255,225,60,"+(.7+.3*pulse)+")";c.lineWidth=3;var r=14*P.s*2.2;c.beginPath();c.arc(P.x,P.y,r,0,Math.PI*2);c.stroke();
         c.beginPath();c.moveTo(P.x-r*1.5,P.y);c.lineTo(P.x+r*1.5,P.y);c.moveTo(P.x,P.y-r*1.5);c.lineTo(P.x,P.y+r*1.5);c.stroke()}
       var bw=260,bx=VW/2-bw/2,by=VH-84;
-      c.fillStyle="rgba(8,18,32,.85)";c.fillRect(bx-3,by-3,bw+6,16);c.fillStyle="#2a3a4a";c.fillRect(bx,by,bw,10);
-      c.fillStyle=G.charge>.86?"#ff4d5e":(G.charge>.55?"#f2b705":"#3ddc84");c.fillRect(bx,by,bw*G.charge,10);
+      if(!window.__sp94){c.fillStyle="rgba(8,18,32,.85)";c.fillRect(bx-3,by-3,bw+6,16);c.fillStyle="#2a3a4a";c.fillRect(bx,by,bw,10);
+      c.fillStyle=G.charge>.86?"#ff4d5e":(G.charge>.55?"#f2b705":"#3ddc84");c.fillRect(bx,by,bw*G.charge,10)}
     }
     c.font="700 22px 'Barlow Condensed','Arial Narrow',sans-serif";c.textAlign="center";c.textBaseline="middle";c.lineWidth=5;c.lineJoin="round";c.strokeStyle="rgba(0,0,0,.75)";
     var hint=human?(pn.t<.7?"Prepara-te…":"← → para apontar · segura REMATE e larga para chutar"):(pn.team===1&&!G.auto?"← → escolhe o lado do mergulho do guarda-redes":"");
-    if(hint){c.strokeText(hint,VW/2,VH-44);c.fillStyle="#fff";c.fillText(hint,VW/2,VH-44)}
+    if(hint&&!window.__sp94){c.strokeText(hint,VW/2,VH-44);c.fillStyle="#fff";c.fillText(hint,VW/2,VH-44)}
     c.restore();
   }
   // quadro do desempate

@@ -166,7 +166,7 @@ addEventListener("keydown",e=>{
 let welcomed=false;
 function welcome(){
   if(welcomed||typeof PREF==="undefined"||PREF.tutorialSeen||stack.length||!document.querySelector("#app .menu-screen"))return;welcomed=true;
-  open({id:"welcome",kind:"celebrate",icon:"level",eyebrow:"Bem-vindo",title:"Girabola Craque",confetti:36,
+  open({id:"welcome",kind:"celebrate",icon:"level",eyebrow:"Bem-vindo",title:"Girabola 94",confetti:36,
    html:"<p>Escolhe um clube da Girabola e leva-o ao título. O <b>tutorial</b> ensina os controlos em cerca de um minuto.</p>",
    actions:[{label:"Fazer o tutorial",kind:"gold",onClick:()=>{if(typeof ac==="function")ac();startTutorial()}},{label:"Agora não",kind:"ghost",onClick:()=>{PREF.tutorialSeen=true;savePrefs()}}]});
 }

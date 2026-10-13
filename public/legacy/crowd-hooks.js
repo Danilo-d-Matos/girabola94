@@ -5,7 +5,8 @@
 })();
 (function(){
   var _launch=launch;
-  launch=function(o){
+  // com ecrã de carregamento: só para os jogos que o pedem (assistente do pré-jogo e online); launch() continua síncrono
+  window.launchPre=function(o){
     if(!window.gstPreload)return _launch.call(this,o);
     var m=document.createElement("div");m.id="loadmask";m.setAttribute("role","status");
     m.style.cssText="position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#06101c;color:#eef4fa;font:600 18px system-ui,sans-serif";

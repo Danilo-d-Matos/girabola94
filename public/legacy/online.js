@@ -188,7 +188,7 @@ function preparar(m) {
   PREF.stadium = m.estadio; PREF.daytime = m.dia;
   ST.escala = MATCH_LEN / (m.matchLen || MATCH_LEN);
   window.__olPending = { guest: guest, lado: m.lado, cols: m.cols };
-  launch(o);                                                  // o launch() espera pelo carregamento do estádio
+  (window.launchPre || launch)(o);                                                  // o launch() espera pelo carregamento do estádio
   var esperar = function () {
     if (!ST || !G || !G.online) { setTimeout(esperar, 100); return; }
     if (guest) G.cols = [m.cols[1], m.cols[0]]; else G.cols = [m.cols[0], m.cols[1]];

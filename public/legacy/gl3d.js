@@ -6,6 +6,8 @@
 "use strict";
 if(typeof THREE==="undefined"){console.warn("Three.js indisponível: a usar o desenho em canvas 2D");return}
 const T=THREE;
+/* escala real: o jogador mede 27 unidades para 1,80 m (15 u/m), por isso uma bola de 22 cm de diâmetro (raio 0,11 m) tem raio 1,65 */
+const BALL_R=0.11*(27/1.8);
 let R=null;
 
 /* ---------- utilitários ---------- */
@@ -308,7 +310,7 @@ function gstTex(g,papel,tex){tex.colorSpace=T.NoColorSpace;tex.flipY=false;tex.a
 function gstScreens(S,g){
   S.ecra=null;
   if(g.papeis.publicidade){
-    const cv=mkCanvas(2048,128),c=cv.getContext("2d"),ads=[["GIRABOLA CRAQUE","#151515","#f2b705"],[G.stadium.toUpperCase(),"#0f2c5c","#ffffff"],["BOLA NO PÉ","#c8102e","#ffffff"],["FUTEBOL ANGOLANO","#1f8a4c","#ffffff"],["JOGO LIMPO","#f2b705","#151515"]],w=2048/ads.length;
+    const cv=mkCanvas(2048,128),c=cv.getContext("2d"),ads=[["GIRABOLA 94","#151515","#f2b705"],[G.stadium.toUpperCase(),"#0f2c5c","#ffffff"],["BOLA NO PÉ","#c8102e","#ffffff"],["FUTEBOL ANGOLANO","#1f8a4c","#ffffff"],["JOGO LIMPO","#f2b705","#151515"]],w=2048/ads.length;
     c.textAlign="center";c.textBaseline="middle";c.font="700 64px 'Barlow Condensed',Arial Narrow,sans-serif";
     ads.forEach((a,i)=>{c.fillStyle=a[1];c.fillRect(i*w,0,w,128);c.fillStyle=a[2];c.fillText(a[0],i*w+w/2,68)});
     gstTex(g,"publicidade",new T.CanvasTexture(cv));
@@ -321,7 +323,7 @@ function gstDrawScreen(S){
   const c=e.cv.getContext("2d"),W2=1024,H2=448,gr=c.createLinearGradient(0,0,0,H2);gr.addColorStop(0,"#0b1f3d");gr.addColorStop(1,"#050d1c");
   c.fillStyle=gr;c.fillRect(0,0,W2,H2);c.fillStyle="#f2b705";c.fillRect(0,0,W2,14);c.fillRect(0,H2-14,W2,14);
   c.textAlign="center";c.textBaseline="middle";c.fillStyle="#ffffff";
-  c.font="700 54px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillText("GIRABOLA CRAQUE",W2/2,62);
+  c.font="700 54px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillText("GIRABOLA 94",W2/2,62);
   c.font="800 150px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillText(G.score[0]+" - "+G.score[1],W2/2,215);
   c.font="700 72px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillStyle="#f2b705";c.fillText(G.teams[0].s,W2*.2,215);c.fillText(G.teams[1].s,W2*.8,215);
   c.fillStyle="#ffffff";c.font="700 64px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillText(minute()+"'",W2/2,335);
@@ -454,7 +456,7 @@ function gballLoad(d,cb){
   new T.GLTFLoader().load("modelos/bolas/bola_"+d+".glb",function(gltf){
     let me=null;gltf.scene.traverse(o=>{if(o.isMesh&&!me)me=o});
     if(!me){e.state="off";return}
-    const k=3.1/0.11,geo=me.geometry.clone();geo.scale(k,k,k);
+    const k=BALL_R/0.11,geo=me.geometry.clone();geo.scale(k,k,k);
     const sm=me.material,nm=sm.normalMap,ro=sm.roughnessMap;
     for(const t of [sm.map,nm,ro])if(t){t.colorSpace=T.NoColorSpace;t.anisotropy=4}
     const mat=new T.MeshStandardMaterial({map:sm.map,normalMap:nm,roughness:.62,metalness:0,emissive:0x2a2a2a});
@@ -900,7 +902,7 @@ function buildScene(){
   for(let i=0;i<10;i++){const m=new T.Mesh(dashGeo,dashMat);m.rotation.z=i*Math.PI/5;m.renderOrder=.5;passSpin.add(m)}
   passRing.rotation.x=-Math.PI/2;
   // bola
-  const bc=mkCanvas(256,128),bt=tex(bc),ballSp=new T.Mesh(new T.SphereGeometry(3.1,28,18),new T.MeshLambertMaterial({map:bt,emissive:0x2a2a2a}));
+  const bc=mkCanvas(256,128),bt=tex(bc),ballSp=new T.Mesh(new T.SphereGeometry(BALL_R,28,18),new T.MeshLambertMaterial({map:bt,emissive:0x2a2a2a}));
   ballSp.castShadow=true;ballSp.renderOrder=1.1;scene.add(ballSp);
   const hotc=mkCanvas(64,64),hq=hotc.getContext("2d"),hg=hq.createRadialGradient(32,32,2,32,32,32);hg.addColorStop(0,"rgba(255,170,40,.9)");hg.addColorStop(1,"rgba(255,80,20,0)");hq.fillStyle=hg;hq.fillRect(0,0,64,64);
   const hot=new T.Sprite(new T.SpriteMaterial({map:tex(hotc),transparent:true,blending:T.AdditiveBlending,depthWrite:false}));hot.scale.set(18,18,1);hot.visible=false;hot.renderOrder=1.05;scene.add(hot);
@@ -929,7 +931,7 @@ function setCamera(sx,sy){
   if(PCAM()){
     const pc=window.__penCam,asp=R.cw/Math.max(1,R.ch),hf=62*Math.PI/180;
     cam.fov=Math.max(36,Math.min(96,2*Math.atan(Math.tan(hf/2)/asp)*180/Math.PI));cam.aspect=asp;cam.near=4;
-    cam.up.set(0,1,0);if(pc.bx!=null){const ex=(pc.tx!=null?pc.tx:pc.gx)-pc.bx,ey=(pc.ty!=null?pc.ty:H/2)-pc.by,ed=Math.hypot(ex,ey)||1,ux=ex/ed,uy=ey/ed,la=Math.min(ed*.72,250);cam.fov=Math.max(36,Math.min(80,2*Math.atan(Math.tan(54*Math.PI/360)/asp)*180/Math.PI));cam.position.set(pc.bx-ux*92-uy*14,42,pc.by-uy*92+ux*14);cam.lookAt(new T.Vector3(pc.bx+ux*la,14,pc.by+uy*la))}
+    cam.up.set(0,1,0);if(pc.bx!=null){const ex=(pc.tx!=null?pc.tx:pc.gx)-pc.bx,ey=(pc.ty!=null?pc.ty:H/2)-pc.by,ed=Math.hypot(ex,ey)||1,ux=ex/ed,uy=ey/ed,la=Math.min(ed*.72,250);cam.fov=Math.max(36,Math.min(80,2*Math.atan(Math.tan(54*Math.PI/360)/asp)*180/Math.PI));const bk=(pc.back||92)*(PREF.stadium==="bairro"||PREF.stadium==="marcal"?.7:1);cam.position.set(pc.bx-ux*bk-uy*14,pc.hh||42,pc.by-uy*bk+ux*14);cam.lookAt(new T.Vector3(pc.bx+ux*la,14,pc.by+uy*la))}
     else{cam.position.set(pc.gx-pc.dir*214,62,H/2);cam.lookAt(new T.Vector3(pc.gx,9,H/2))}
     cam.updateProjectionMatrix();cam.updateMatrixWorld(true);
     return;
@@ -1001,11 +1003,11 @@ function drawGL(c,V){
   // (a sombra elíptica já é desenhada no sprite)
   // bola
   const b=V.ball;
-  S.ballSp.position.set(b.x,3.1,b.y);
+  S.ballSp.position.set(b.x,BALL_R,b.y);
   {const pb=S.bprev,dx=pb?b.x-pb.x:0,dy=pb?b.y-pb.y:0,dd=Math.hypot(dx,dy);
-   if(pb&&dd>.001&&dd<70){S.bq=S.bq||new T.Quaternion();S.bax=S.bax||new T.Vector3();S.bax.set(dy,0,-dx).normalize();S.bq.setFromAxisAngle(S.bax,dd/3.1);S.ballSp.quaternion.premultiply(S.bq)}
+   if(pb&&dd>.001&&dd<70){S.bq=S.bq||new T.Quaternion();S.bax=S.bax||new T.Vector3();S.bax.set(dy,0,-dx).normalize();S.bq.setFromAxisAngle(S.bax,dd/BALL_R);S.ballSp.quaternion.premultiply(S.bq)}
    S.bprev={x:b.x,y:b.y}}
-  S.ballShadow.visible=true;S.ballShadow.position.set(b.x+1.2,.2,b.y);S.ballShadow.scale.set(2,.95,1);
+  S.ballShadow.visible=true;S.ballShadow.position.set(b.x+.7,.2,b.y);S.ballShadow.scale.set(1.15,.55,1);
   S.hot.visible=!!V.hot;if(V.hot)S.hot.position.set(b.x,4,b.y);
   const tr=V.trail||[];
   for(let i=0;i<S.trail.length;i++){const s=S.trail[i];if(i<tr.length){const a=(i+1)/tr.length;s.visible=true;s.position.set(tr[i].x,3,tr[i].y);s.material.opacity=a*.5;s.material.color.set(V.hot?(i%2?0xff5a1f:0xffb020):0xffffff);const sz=(2.5*a+.5)*.9*2;s.scale.set(sz,sz,1)}else s.visible=false}

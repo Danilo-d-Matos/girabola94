@@ -35,7 +35,10 @@ const scripts = [
   "legacy/fit-engine.js",
   "modelos/multidao.js",
   "legacy/crowd-hooks.js",
-  "legacy/online.js"
+  "legacy/tutorial-ui.js",
+  "legacy/online.js",
+  "legacy/setpieces94.js",
+  "legacy/menu94.js"
 ];
 for (const src of scripts) {
   const s = document.createElement("script");
