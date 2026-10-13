@@ -539,9 +539,11 @@ function makeKitAtlas(id){
       if(extra){c.save();c.clip(p);extra();c.restore()}};
     fill("Camisola",k.shirt,()=>{if(!(k.pattern|0))return;for(const r of KIT_REGIOES){c.save();c.translate(r[0]*W2,r[2]*H2);const w=(r[1]-r[0])*W2,h=(r[3]-r[2])*H2;c.beginPath();c.rect(0,0,w,h);c.clip();kitPatDraw(c,k.pattern|0,w,h,k.accent);c.restore()}});
     fill("Calcoes",k.shorts);fill("Meias",k.socks);
+    if(at.em&&at.em.complete&&at.em.naturalWidth){const e=at.em,r=Math.min(54/e.naturalWidth,54/e.naturalHeight);c.drawImage(e,390-e.naturalWidth*r/2,206-e.naturalHeight*r/2,e.naturalWidth*r,e.naturalHeight*r)}   // emblema no peito (mesmo sítio da textura oficial)
     tex.needsUpdate=true;
   };
   const img=new Image();img.onload=()=>{at.img=img;at.ready=true;at.paint(at.kit||{shirt:"#fff",shorts:"#fff",socks:"#fff",accent:"#000",pattern:0});at.mats.forEach(m=>{m.visible=true})};img.src="modelos/equipas/"+id+".jpg";
+  const em=new Image();em.onload=()=>{at.em=em;if(at.ready&&at.kit)at.paint(at.kit)};em.src="modelos/emblemas/"+id+".png";at.em=null;
   return at;
 }
 function glbMatSet(look){

@@ -13,7 +13,7 @@ function init(){
   sfxBus=c.createGain();crowdBus=c.createGain();musicBus=c.createGain();musicGate=c.createGain();
   sfxBus.connect(master);crowdBus.connect(master);musicGate.connect(musicBus);musicBus.connect(master);
   var n=c.sampleRate*2;noiseBuf=c.createBuffer(1,n,c.sampleRate);var d=noiseBuf.getChannelData(0);for(var i=0;i<n;i++)d[i]=Math.random()*2-1;
-  Aud.master=master;Aud.comp=comp;Aud.crowd=crowdBus;Aud.music=musicBus;Aud.sfxBus=sfxBus;Aud.ok=true;buildCrowd();return true;
+  Aud.CR=CR;Aud.master=master;Aud.comp=comp;Aud.crowd=crowdBus;Aud.music=musicBus;Aud.sfxBus=sfxBus;Aud.ok=true;buildCrowd();return true;
 }
 function unlock(){
   if(!init())return;if(c.state==="suspended")c.resume();
@@ -29,6 +29,7 @@ function tone(out,t,o){var os=c.createOscillator(),g=c.createGain();os.type=o.ty
 /* ---------- efeitos sonoros ---------- */
 function sfx(k,v){
   if(!PREF.sound)return;if(!c||c.state!=="running")return;
+  if(Aud.sample&&Aud.sample(k,v))return;
   var t=c.currentTime,out=sfxBus;
   switch(k){
     case "kick":{var p=Math.min(1,.25+(v||6)/13);tone(out,t,{f0:190,f1:55,sw:.09,dur:.14,peak:.34*p,type:"sine"});nburst(out,t,{type:"highpass",f:1800,dur:.035,peak:.16*p});if((v||0)>9.6)nburst(out,t,{type:"bandpass",f:700,q:.8,dur:.18,peak:.12*p,f1:300});break}
@@ -62,13 +63,14 @@ function buildCrowd(){
 }
 function crowdEvent(kind){
   if(typeof G==="undefined"||!G||!c)return;
+  var smp=!!(Aud.crowdSample&&Aud.crowdSample(kind));   // true: a reacção é uma gravação, não se sintetiza
   switch(kind){
-    case "goal":CR.resolved=true;CR.cheer=1.3;CR.exc=1;CR.tension=0;applause(3.2);horn();break;
-    case "shot":CR.tension=Math.max(CR.tension,.7);CR.exc=Math.min(1,CR.exc+.12);gasp();break;
-    case "save":CR.resolved=true;CR.tension=0;CR.cheer=Math.max(CR.cheer,.55);CR.exc=Math.min(1,CR.exc+.1);applause(1.2);sfx("save");break;
+    case "goal":CR.resolved=true;CR.cheer=1.3;CR.exc=1;CR.tension=0;if(!smp){applause(3.2);horn()}break;
+    case "shot":CR.tension=Math.max(CR.tension,.7);CR.exc=Math.min(1,CR.exc+.12);if(!smp)gasp();break;
+    case "save":CR.resolved=true;CR.tension=0;CR.cheer=Math.max(CR.cheer,.55);CR.exc=Math.min(1,CR.exc+.1);if(!smp)applause(1.2);sfx("save");break;
     case "miss":CR.tension=0;CR.groan=.9;break;
-    case "foul":CR.boo=.9;whistleCrowd(1.4);break;
-    case "half":case "end":applause(3.5);CR.cheer=Math.max(CR.cheer,.5);break;
+    case "foul":CR.boo=.9;if(!smp)whistleCrowd(1.4);break;
+    case "half":case "end":if(!smp)applause(3.5);CR.cheer=Math.max(CR.cheer,.5);break;
     case "kickoff":CR.cheer=Math.max(CR.cheer,.35);CR.exc=Math.min(1,CR.exc+.2);break;
   }
 }
@@ -77,13 +79,15 @@ function whistleCrowd(d){if(!c)return;var t=c.currentTime;for(var i=0;i<4;i++){v
 function horn(){if(!c)return;var t=c.currentTime;[0,.28].forEach(function(o,i){tone(crowdBus,t+o,{type:"sawtooth",f0:i?233:196,dur:.24,peak:.07,lp:900});tone(crowdBus,t+o,{type:"square",f0:i?351:294,dur:.24,peak:.04,lp:900})})}
 function applause(sec){if(!c)return;var t=c.currentTime,n=Math.round(sec*26);for(var i=0;i<n;i++){var tt=t+i/26+Math.random()*.03,fall=1-i/n;nburst(crowdBus,tt,{type:"bandpass",f:1800+Math.random()*2200,q:1.2,dur:.045,peak:.1*(.3+.7*fall)})}}
 function goalFx(){
-  var t=c.currentTime;nburst(sfxBus,t,{type:"bandpass",f:1800,q:.6,dur:.6,peak:.2,f1:700,a:.02});sfx("net");
-  // fanfarra curta de celebração em kuduro
-  [[57,0],[60,.14],[64,.28],[69,.42],[72,.56]].forEach(function(p){tone(sfxBus,t+.15+p[1],{type:"sawtooth",f0:hz(p[0]+12),dur:.22,peak:.06,lp:3000})});
+  var t=c.currentTime;sfx("net");
+  if(!Aud.sampleOn){nburst(sfxBus,t,{type:"bandpass",f:1800,q:.6,dur:.6,peak:.2,f1:700,a:.02});
+  // fanfarra curta de celebração em kuduro (só se as gravações não carregaram)
+  [[57,0],[60,.14],[64,.28],[69,.42],[72,.56]].forEach(function(p){tone(sfxBus,t+.15+p[1],{type:"sawtooth",f0:hz(p[0]+12),dur:.22,peak:.06,lp:3000})})}
   CR.duck=t+3.2;
 }
 /* batuque de bancada + palmas no ritmo do cântico */
 function crowdBeats(){
+  if(Aud.sampleOn)return;
   if(!c||typeof G==="undefined"||!G||CR.exc<.2||G.paused)return;
   var bpm=112,spb=60/bpm/2;
   if(CR.nextBeat<c.currentTime-.2)CR.nextBeat=c.currentTime+.05;
@@ -114,17 +118,19 @@ function crowdUpdate(dt){
   if(pend){CR.shotFlight=true;CR.resolved=false}else{CR.shotFlight=false}
   var now=c.currentTime,duck=(CR.duck&&now<CR.duck)?.5:1;
   var e=CR.exc,tt=.12;
-  CR.murmur.gain.setTargetAtTime((.03+.17*e)*(G.paused?.15:1),now,tt);
-  CR.hiss.gain.setTargetAtTime(.01+.05*CR.tension+.04*e,now,.2);
+  var syn=Aud.sampleOn?0:1;
+  CR.murmur.gain.setTargetAtTime(syn*(.03+.17*e)*(G.paused?.15:1),now,tt);
+  CR.hiss.gain.setTargetAtTime(syn*(.01+.05*CR.tension+.04*e),now,.2);
   var open=CR.cheer>.15?1:0;
   for(var i=0;i<CR.voices.length;i++){var v=CR.voices[i];
     var lift=1+.28*e+.4*CR.cheer-.28*CR.groan-.2*CR.boo+.1*CR.tension;
     v.os.frequency.setTargetAtTime(v.base*lift,now,.08);
     v.a.frequency.setTargetAtTime(520+260*CR.cheer+120*CR.tension-120*CR.groan,now,.1);v.b.frequency.setTargetAtTime(900+300*CR.cheer-150*CR.groan,now,.1);
     var gv=(.002+.014*e)+.05*CR.cheer+.03*CR.tension+.035*CR.groan+.03*CR.boo;
-    v.g.gain.setTargetAtTime(gv*(G.paused?0:1),now,.12)}
+    v.g.gain.setTargetAtTime(syn*gv*(G.paused?0:1),now,.12)}
   var cb=nv("crowdVol",.8)*(G.paused?.25:1)*duck;crowdBus.gain.setTargetAtTime(cb,now,.2);
   crowdBeats();
+  if(Aud.crowdTick)Aud.crowdTick(dt,CR,G);
 }
 function Defs_n(x){var nx=Math.max((x-X0)/(X1-X0),0);return Math.max(nx,1-nx)-.62}
 /* ---------- música ---------- */
@@ -230,10 +236,10 @@ function seg(label,key,items,def){var d=document.createElement("div");d.classNam
 function injectOptions(){
   var o=document.querySelector(".options-screen");if(!o||o.querySelector(".aud-panel"))return;
   var p=document.createElement("div");p.className="panel aud-panel";p.innerHTML='<p class="panel-title">Som e música</p>';
-  p.appendChild(slider("Efeitos","sfxVol",.9));p.appendChild(slider("Adeptos","crowdVol",.8));p.appendChild(slider("Música","musicVol",.6));
+  p.appendChild(slider("Efeitos","sfxVol",.9));p.appendChild(slider("Bola","ballVol",1));p.appendChild(slider("Árbitro","refVol",1));p.appendChild(slider("Adeptos","crowdVol",.8));p.appendChild(slider("Música","musicVol",.6));
   p.appendChild(seg("Estilo musical","musicStyle",[["auto","Automático"],["semba","Semba"],["kizomba","Kizomba"],["kuduro","Kuduro"],["off","Sem música"]],"auto"));
   p.appendChild(seg("Música durante o jogo","gameMusic",[["low","Baixa"],["normal","Normal"],["off","Desligada"]],"low"));
-  var n=document.createElement("p");n.className="note";n.textContent="Todos os sons são gerados pelo jogo. O público reage aos remates, defesas, golos e faltas.";p.appendChild(n);
+  var n=document.createElement("p");n.className="note";n.textContent="A bola, os apitos e os adeptos usam gravações; a música e os sons de interface são gerados pelo jogo. O público reage aos remates, defesas, golos e faltas.";p.appendChild(n);
   o.appendChild(p);
 }
 if(window.MutationObserver){var q=false;new MutationObserver(function(){if(!q){q=true;setTimeout(function(){q=false;injectOptions()},80)}}).observe(document.getElementById("app"),{childList:true})}

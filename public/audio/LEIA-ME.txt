@@ -1,0 +1,28 @@
+GIRABOLA 94 — PACOTE DE EFEITOS SONOROS
+WAV, 44,1 kHz, PCM 16-bit. Os ficheiros foram recortados, normalizados e convertidos dos nove áudios fornecidos.
+
+01_estadio_ambiente_loop.wav — ambiente contínuo de estádio; usar em loop com volume baixo.
+02_adeptos_reacao_media.wav — reação moderada do público.
+03_adeptos_golo.wav — celebração de golo.
+04_adeptos_reacao_intensa.wav — reação intensa do público.
+05_adeptos_expectativa.wav — ambiente de expectativa/tensão.
+06_toque_bola_passe.wav — contacto de bola para passe.
+07_toque_bola_remate.wav — contacto de bola para remate.
+08_toque_bola_curto.wav — toque curto de bola.
+09_apito_arbitro_curto.wav — apito curto.
+10_apito_arbitro_longo.wav — apito longo.
+11_apito_alternativo.wav — variação de apito.
+12_golo_reacao_estadio.wav — ambiente seguido de celebração.
+13_apito_final_com_adeptos.wav — apito final seguido de reação do público.
+
+INTEGRAÇÃO SUGERIDA
+- Ambiente: loop contínuo, volume inicial 15–25%.
+- Toques: alternar variações aleatoriamente e ajustar volume ao tipo de contacto.
+- Apitos: disparar apenas nos eventos correctos, sem sobreposição.
+- Adeptos: misturar ambiente contínuo com reações; intensificar após golo ou oportunidade.
+- Golo: disparar uma vez por evento, nunca a cada frame.
+- Separar controlos de volume por ambiente, adeptos, árbitro, bola e interface.
+- Reutilizar o sistema de áudio existente no jogo.
+- Confirmar licenças dos ficheiros originais antes de distribuição comercial.
+
+Nota: são excertos editados, não todos gravações isoladas perfeitas. Testar a mistura dentro do jogo antes de produção final.
