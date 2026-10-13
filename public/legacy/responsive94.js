@@ -5,6 +5,7 @@
 (function () {
 "use strict";
 var root = document.documentElement;
+var _l = document.createElement("link"); _l.rel = "stylesheet"; _l.href = "ui/telas94.css"; document.head.appendChild(_l);
 /* ---------- foco visível e esconder o toque quando há teclado ---------- */
 var st = document.createElement("style");
 st.textContent = "html.has-kbd .touch{display:none!important}" +

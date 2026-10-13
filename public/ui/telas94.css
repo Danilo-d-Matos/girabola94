@@ -1,0 +1,53 @@
+/* ===== Girabola 94 — ecrãs sem scroll (ajuste ao tamanho do ecrã) ===== */
+.online-screen{height:100dvh;max-height:100dvh;overflow:hidden;display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
+.ol-top{display:flex;align-items:center;gap:16px;flex:none}.ol-top h2{margin:0}
+.ol-cols{flex:1;min-height:0;display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.7fr);gap:14px}
+.ol-left{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
+.ol-teams{min-height:0}
+.ol-teams .grid{height:100%;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr);gap:8px}
+.ol-teams .team{padding:6px 10px;min-height:0;gap:8px;overflow:hidden}
+.ol-teams .team .crest{width:clamp(30px,6.5vh,56px);height:auto}
+.ol-teams .team b{font-size:clamp(12px,2vh,17px)}.ol-teams .team span{font-size:clamp(10px,1.5vh,13px)}
+@media (max-width:640px){
+  .online-screen{height:auto;max-height:none;overflow:visible}
+  .ol-cols{display:block}.ol-left{overflow:visible;margin-bottom:10px}
+  .ol-teams .grid{height:auto;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:auto}
+}
+
+/* ---- menu principal: sempre numa só página, sem scroll, a partir de 820 px de largura ---- */
+@media (min-width:821px),(min-width:560px) and (max-height:520px){
+  .screen.g94-screen .g94-card.principal{grid-column:span 6}.screen.g94-screen .g94-card.l2,.screen.g94-screen .g94-card.l3{grid-column:span 3}
+  .screen.g94-screen .g94-card.i1,.screen.g94-screen .g94-card.i2,.screen.g94-screen .g94-card.i3{grid-column:span 4}.screen.g94-screen .g94-card.b1,.screen.g94-screen .g94-card.b2{grid-column:span 6}
+  .screen.g94-screen .g94-top{grid-template-columns:auto minmax(0,1fr) auto}.screen.g94-screen .g94-nav{grid-column:auto;order:0;justify-self:stretch}
+  .screen.g94-screen:has(.g94-grid){height:100dvh;max-height:100dvh;overflow:hidden;display:flex;flex-direction:column;box-sizing:border-box}
+  .screen.g94-screen:has(.g94-grid) .g94{flex:1;min-height:0}
+  .screen.g94-screen .g94-grid{flex:1;min-height:0;grid-auto-rows:minmax(0,1fr)}
+  .screen.g94-screen .g94-card,.screen.g94-screen .g94-card.principal{min-height:0;padding:clamp(6px,1.6vh,22px)}
+  .screen.g94-screen .g94-card h3{font-size:clamp(20px,3.6vh,38px)}
+}
+@media (min-width:821px) and (max-height:900px),(min-width:560px) and (max-height:520px){
+  .screen.g94-screen .g94-card .d,.screen.g94-screen .g94-slogan{display:none}.screen.g94-screen .g94-logo{height:clamp(38px,6.5vh,64px)}
+  .screen.g94-screen .g94-card .ico{width:clamp(26px,4.2vh,40px);height:clamp(26px,4.2vh,40px)}
+}
+@media (min-width:821px) and (max-height:760px),(min-width:560px) and (max-height:520px){.screen.g94-screen .g94-rodape{display:none}.screen.g94-screen .g94-cont{padding:6px 14px}.screen.g94-screen .g94-cont b{font-size:16px}.screen.g94-screen .g94-tab{padding:7px 12px}.screen.g94-screen .g94-prof{padding:4px 8px}.screen.g94-screen .g94-avatar{width:34px;height:34px}}
+/* cartões de sobreposição (fim de jogo, intervalo, pausa) em ecrãs baixos */
+@media (max-height:800px){#ov .card{padding:14px 20px!important;gap:8px!important}#ov .bigscore{font-size:54px!important}#ov .result-art{width:96px!important;height:108px!important}}
+@media (min-width:821px),(min-width:560px) and (max-height:520px){.screen.g94-screen:has(.g94-grid){margin:0!important}}
+@media (min-width:560px) and (max-height:520px){.screen.g94-screen .g94-card .k,.screen.g94-screen .g94-card .s{display:none}.screen.g94-screen .g94-card h3{font-size:clamp(15px,5vh,22px)}.screen.g94-screen .g94-top{gap:8px}.screen.g94-screen .g94-nav{padding:2px}.screen.g94-screen .g94-tab span{display:none}.screen.g94-screen .g94-tab svg{display:block!important;width:18px;height:18px}.screen.g94-screen .g94-logo{height:34px}.screen.g94-screen .g94-prof .g94-nome{display:none}.screen.g94-screen{padding:6px 12px!important;gap:6px}.screen.g94-screen .g94{gap:6px}.screen.g94-screen .g94-grid{gap:6px}.screen.g94-screen .g94-card{gap:8px}.screen.g94-screen .g94-card .tx{max-width:80%}}
+@media (min-width:821px) and (max-width:1180px){.screen.g94-screen .g94-tab{padding:8px 7px;font-size:10px;letter-spacing:.02em}.screen.g94-screen .g94-tab span{white-space:nowrap}.screen.g94-screen .g94-prof .g94-nome{display:none}}
+/* em computador e TV nenhum ecrã precisa de scroll: sem barra de deslocação nem durante o ajuste inicial */
+@media (min-width:821px) and (min-height:600px),(min-width:560px) and (max-height:600px){html,body{overflow:hidden}}
+
+/* telemóvel na horizontal (ecrãs baixos): tudo numa só vista, com listas compactas */
+@media (max-height:560px) and (min-width:560px){
+  .online-screen{gap:6px;padding:6px 12px!important}.ol-top h2{font-size:22px}.ol-top .eyebrow{display:none}
+  .ol-cols{grid-template-columns:minmax(220px,.9fr) minmax(0,1.6fr);gap:10px}.ol-left{gap:6px}.ol-left .opt{padding:6px 10px;gap:4px}.ol-left .note{display:none}
+  .ol-left input{padding:6px 10px!important;font-size:15px!important}.ol-left .btn{padding:8px 12px;font-size:14px}
+  .ol-teams .team span{display:none}.ol-teams .team .crest{width:clamp(22px,8vh,34px)}
+  .screen.tu-screen{height:100dvh;max-height:100dvh;overflow:hidden;box-sizing:border-box;padding:6px 12px!important;gap:4px}
+  .tu-screen .tu{min-height:0;height:100%;grid-template-columns:170px minmax(0,1fr);gap:8px}
+  .tu-side{overflow:auto;padding:6px;gap:2px}.tu-side .tu-n small{display:none}
+  .tu-main{min-height:0;overflow:auto}
+  .g94-screen .g94-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:4px 0}.g94-st{padding:4px 8px}.g94-st b{font-size:18px}
+  .g94-screen .tablewrap{display:none}.g94-screen .panel{padding:10px}
+}
