@@ -39,9 +39,10 @@ function desenhar(c) {
   TU(c); c.save();
   // faixa de contexto, topo direito
   c.font = FONT_T; var t1 = "BOLA PARADA", w1 = Math.max(150, c.measureText(x.banner).width + 40);
-  painel(c, VW - w1 - 64, 14, w1, 46);
-  c.textBaseline = "alphabetic"; c.textAlign = "left"; c.fillStyle = "#AFC2D4"; c.font = "600 11px system-ui"; c.fillText(t1, VW - w1 - 50, 31);
-  c.fillStyle = "#F5F7FA"; c.font = "700 19px 'Barlow Condensed','Arial Narrow',sans-serif"; c.fillText(x.banner, VW - w1 - 50, 51);
+  var tb = document.querySelector(".topbar"), y0 = ((tb ? tb.offsetHeight : 44) + 8) / SC;
+  painel(c, 16, y0, w1, 46);
+  c.textBaseline = "alphabetic"; c.textAlign = "left"; c.fillStyle = "#AFC2D4"; c.font = "600 11px system-ui"; c.fillText(t1, 30, y0 + 17);
+  c.fillStyle = "#F5F7FA"; c.font = "700 19px 'Barlow Condensed','Arial Narrow',sans-serif"; c.fillText(x.banner, 30, y0 + 37);
   if (x.titulo) {
     var n = x.linhas.length, h = 40 + n * 26, py = VH - h - 16;
     painel(c, 16, py, 270, h);

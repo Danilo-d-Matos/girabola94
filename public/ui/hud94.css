@@ -1,0 +1,22 @@
+/* ===== Girabola 94 — HUD do jogo como sobreposição transparente; o campo ocupa 100% do ecrã ===== */
+.match{padding:0!important;background:#000;display:block!important}
+.match .stage{position:absolute!important;inset:0;width:100%!important;height:100%!important;flex:none}
+.match .keys{display:none!important}
+.match .topbar{position:absolute;top:0;left:0;right:0;z-index:30;margin:0!important;padding:4px max(10px,env(safe-area-inset-right)) 4px max(10px,env(safe-area-inset-left))!important;gap:10px;
+  min-height:0;height:clamp(34px,5.2vh,46px);background:rgba(6,22,38,.58)!important;border:0!important;border-radius:0!important;box-shadow:none!important;align-items:center;
+  pointer-events:none}
+.match .topbar>*{pointer-events:auto}
+.match .topbar .icon{width:30px;height:28px;background:rgba(255,255,255,.10);border-radius:6px}
+.match .topbar .board{position:absolute;left:50%;transform:translateX(-50%);background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important;
+  color:#F5F7FA!important;padding:0!important;gap:0;pointer-events:none;overflow:visible}
+.match .topbar .board .tn{color:#F5F7FA!important;background:none!important;font-size:clamp(14px,2vw,22px);padding:0 clamp(6px,1vw,14px);letter-spacing:.04em}
+.match .topbar .board .tn .crest{width:clamp(18px,2.2vw,28px)}
+.match .topbar .board .sc{background:none!important;clip-path:none!important;color:#FFC629!important;font-size:clamp(20px,2.8vw,32px);padding:0 clamp(8px,1.2vw,16px);margin:0;border:0}
+.match .topbar .board .clk{background:none!important;color:#FFC629!important;font-size:clamp(14px,1.8vw,22px);min-width:0;padding:0 clamp(6px,1vw,12px)}
+.match .topbar .ball-player{border-left:0!important;padding:0 8px;max-width:200px;margin-left:6px}
+.match .topbar .ball-player small{color:#AFC2D4}
+.match .topbar .ball-player strong{color:#F5F7FA;font-size:13px}
+@media (max-width:760px){.match .topbar .ball-player{display:none}.match .topbar .energy .bar{width:44px}}
+.match .stage .skip,.match .stage .tutbox{top:calc(clamp(34px,5.2vh,46px) + 8px)}
+.match .stage{border:0!important}.match canvas,.match #glc{border-radius:0!important}
+.match .overlay{z-index:40!important}

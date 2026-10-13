@@ -84,7 +84,7 @@ function pitchTexture(aniso){
 /* ---------- rede das balizas ---------- */
 function netTexture(){const c=mkCanvas(128,128),q=c.getContext("2d");q.clearRect(0,0,128,128);q.strokeStyle="rgba(255,255,255,.85)";q.lineWidth=5;q.strokeRect(0,0,128,128);const t=tex(c);t.wrapS=t.wrapT=T.RepeatWrapping;return t}
 function makeGoal(s,netMap){
-  const gx=s?X1:X0,d=s?1:-1,GZ=26,BZ=20,DP=26,root=new T.Group();root.position.set(gx,0,0);
+  const gx=s?X1:X0,d=s?1:-1,GZ=36.6,BZ=30,DP=26,root=new T.Group();root.position.set(gx,0,0);
   const net=new T.Group();root.add(net);
   const mat=new T.MeshBasicMaterial({map:netMap.clone(),transparent:true,opacity:.34,side:T.DoubleSide,depthWrite:false});
   mat.map.needsUpdate=true;

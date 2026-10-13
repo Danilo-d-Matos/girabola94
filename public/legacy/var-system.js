@@ -188,10 +188,11 @@ function penCamCalc(){
     else if(now<(G.penCamUntil||0)&&G.state!=="replay"){on=true;team=G.penCamTeam||0}
   }
   var sp=G&&G.state==="setpiece"&&G.setp&&(G.setp.kind==="freekick"||G.setp.kind==="corner"||G.setp.kind==="goalkick")&&G.setp.team===0&&G.setp.taker===G.ctrl&&!G.auto&&!G.shoot,spT=null;   // só nos livres: nos cantos, lançamentos e pontapés de baliza a câmara ficaria dentro da bancada
-  if(sp){on=true;team=0;var k=G.setp.kind,s0=sd(0)===0;spT=k==="corner"?{x:s0?X1-70:X0+70,y:H/2,back:52,h:34}:(k==="throw"?{x:G.setp.x,y:H/2}:(k==="goalkick"?{x:W/2,y:H/2,back:78,h:52}:{x:s0?X1:X0,y:H/2}))}
+  if(sp){on=true;team=0;var k=G.setp.kind,s0=sd(0)===0;spT=k==="corner"?{x:s0?X1-70:X0+70,y:H/2,back:72,h:58}:(k==="throw"?{x:G.setp.x,y:H/2}:(k==="goalkick"?{x:W/2,y:H/2,back:78,h:52}:{x:s0?X1:X0,y:H/2,back:124,h:66}))}
   if(PREF.camera==="top")on=false;
   var fkB=spT?{x:G.setp.taker.x,y:G.setp.taker.y}:(G&&G.state==="pen"&&G.pen&&G.pen.fk)?{x:G.pen.bx,y:G.pen.by}:(G&&G.penCamB&&now<(G.penCamUntil||0)?G.penCamB:null);
-  window.__penCam=on?{on:true,gx:sd(team)===0?X1:X0,dir:sd(team)===0?1:-1,bx:fkB?fkB.x:null,by:fkB?fkB.y:null,tx:spT?spT.x:null,ty:spT?spT.y:null,back:spT&&spT.back||null,hh:spT&&spT.h||null}:{on:false};
+  var fkM=!spT&&G&&G.state==="pen"&&G.pen&&G.pen.fk||(spT&&G.setp.kind==="freekick");
+  window.__penCam=on?{on:true,gx:sd(team)===0?X1:X0,dir:sd(team)===0?1:-1,bx:fkB?fkB.x:null,by:fkB?fkB.y:null,tx:spT?spT.x:null,ty:spT?spT.y:null,back:spT&&spT.back||(fkM?124:null),hh:spT&&spT.h||(fkM?66:null)}:{on:false};
 }
 var _uc=updateCam;
 updateCam=function(){var r=_uc.apply(this,arguments);try{penCamCalc()}catch(e){}return r};

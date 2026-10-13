@@ -208,7 +208,7 @@ function finalizeSeason(){
 const cosm=(k)=>COSM[k].find(c=>c.id===C.cos[k])||COSM[k][0];
 
 /* ================= Motor do jogo ================= */
-const W=1000,H=620,X0=40,X1=960,Y0=40,Y1=580,GH=150,GY0=H/2-GH/2,GY1=H/2+GH/2,DT=1/60,MATCH_LEN=150;
+const W=1000,H=620,X0=40,X1=960,Y0=40,Y1=580,GH=110,GY0=H/2-GH/2,GY1=H/2+GH/2,DT=1/60,MATCH_LEN=150;
 const NP=12,RF=NP*6+4,RN=240; // buffer de replay: 4 s a 60 imagens/s
 const sd=t=>G&&G.swap?1-t:t; // lado do campo da equipa: troca na 2.ª parte
 const pxOf=(t,nx)=>sd(t)===0?X0+nx*(X1-X0):X1-nx*(X1-X0), pyOf=ny=>Y0+ny*(Y1-Y0);
