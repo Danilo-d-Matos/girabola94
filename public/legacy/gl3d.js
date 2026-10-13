@@ -131,6 +131,7 @@ function shirtCanvas(look){
     case 5:for(const dx of [0,512])poly([[-80,8],[-14,0],[82,120],[14,128]],dx);break;
     case 6:for(const x of [-16,10,240,266,496])c.fillRect(x+256*0,0,6,128);break;
     case 7:c.save();c.globalAlpha=.5;for(let i=-128;i<640;i+=14){c.fillRect(i,0,5,128)}c.restore();break;
+    default:if(k.pattern>=8){c.save();c.beginPath();c.rect(0,0,512,128);c.clip();c.fillStyle=k.accent;for(const dx of [0,256]){c.save();c.translate(dx,0);kitPatDraw(c,k.pattern,256,128,k.accent);c.restore()}c.restore()}
   }
   // gola, bainha e sombreado de pregas
   c.fillStyle=look.ref?"#e8c61b":k.trim;c.fillRect(0,0,512,9);
@@ -491,12 +492,64 @@ function glbTeamTex(id){
   try{t.anisotropy=Math.min(8,R.gl.capabilities.getMaxAnisotropy())}catch(e){}
   return GLBM.tex[id]=t;
 }
+
+/* ---------- padrões de camisola e atlas do equipamento personalizado ----------
+   O atlas de cada equipa (modelos/equipas/<id>.jpg) é uma projeção frontal/traseira/lateral do jogador.
+   Para personalizar, pintamos por cima dos triângulos UV da camisola, dos calções e das meias: cor de base + padrão. */
+function kitPatDraw(c,p,w,h,col){
+  c.fillStyle=col;
+  const poly=(pts)=>{c.beginPath();pts.forEach((q,i)=>i?c.lineTo(q[0]*w,q[1]*h):c.moveTo(q[0]*w,q[1]*h));c.closePath();c.fill()};
+  switch(p){
+    case 1:for(let i=0;i<8;i+=2)c.fillRect(i*w/8,0,w/8,h);break;
+    case 2:c.fillRect(0,0,w*.16,h);c.fillRect(w*.84,0,w*.16,h);c.fillRect(w*.42,0,w*.16,h);break;
+    case 3:c.fillRect(0,h*.4,w,h*.2);break;
+    case 4:poly([[0,0],[.24,0],[.72,1],[.48,1]]);poly([[1,0],[.76,0],[.28,1],[.52,1]]);break;
+    case 5:poly([[0,0],[.42,0],[.92,1],[.5,1]]);poly([[1,0],[.58,0],[.08,1],[.5,1]]);break;
+    case 6:for(let i=0;i<9;i++)c.fillRect(w*(.08+i*.105),0,w*.022,h);break;
+    case 7:c.save();c.globalAlpha=.5;for(let i=0;i<9;i++)c.fillRect(w*(.02+i*.115),0,w*.055,h);c.restore();break;
+    case 8:for(let i=0;i<4;i+=2)c.fillRect(i*w/4,0,w/4,h);break;
+    case 9:for(let i=0;i<8;i+=2)c.fillRect(0,i*h/8,w,h/8);break;
+    case 10:poly([[0,0],[.34,0],[1,1],[.66,1]]);break;
+    case 11:c.fillRect(w/2,0,w/2,h);break;
+    case 12:for(let i=0;i<6;i++)for(let j=0;j<6;j++)if((i+j)%2)c.fillRect(i*w/6,j*h/6,w/6,h/6);break;
+  }
+}
+const KIT_REGIOES=[[.093,.249,.115,.39],[.459,.591,.115,.39],[.728,.79,.2,.39],[.825,.893,.2,.39]];
+function uvPaths(W2,H2){
+  if(GLBM.uvp)return GLBM.uvp;
+  const out={};
+  GLBM.proto.traverse(o=>{
+    if(!(o.isMesh||o.isSkinnedMesh)||!["Camisola","Calcoes","Meias"].includes(o.name))return;
+    const uv=o.geometry.attributes.uv,ix=o.geometry.index,p=new Path2D();
+    for(let t=0;t<ix.count;t+=3){const a=ix.getX(t),b=ix.getX(t+1),d=ix.getX(t+2);p.moveTo(uv.getX(a)*W2,uv.getY(a)*H2);p.lineTo(uv.getX(b)*W2,uv.getY(b)*H2);p.lineTo(uv.getX(d)*W2,uv.getY(d)*H2);p.closePath()}
+    out[o.name]=p;
+  });
+  return GLBM.uvp=out;
+}
+function makeKitAtlas(id){
+  const W2=2048,H2=1024,cv=mkCanvas(W2,H2),c=cv.getContext("2d"),tex=new T.CanvasTexture(cv);
+  tex.flipY=false;tex.colorSpace=T.NoColorSpace;tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.minFilter=T.LinearMipmapLinearFilter;tex.magFilter=T.LinearFilter;tex.generateMipmaps=true;
+  try{tex.anisotropy=Math.min(8,R.gl.capabilities.getMaxAnisotropy())}catch(e){}
+  const at={tex,ready:false,kit:null,mats:[],canvas:cv};
+  at.paint=function(k){
+    at.kit=k;if(!at.ready)return;
+    c.drawImage(at.img,0,0,W2,H2);
+    const P=uvPaths(W2,H2),fill=(name,col,extra)=>{
+      const p=P[name];if(!p)return;c.fillStyle=col;c.strokeStyle=col;c.lineWidth=3;c.fill(p);c.stroke(p);
+      if(extra){c.save();c.clip(p);extra();c.restore()}};
+    fill("Camisola",k.shirt,()=>{if(!(k.pattern|0))return;for(const r of KIT_REGIOES){c.save();c.translate(r[0]*W2,r[2]*H2);const w=(r[1]-r[0])*W2,h=(r[3]-r[2])*H2;c.beginPath();c.rect(0,0,w,h);c.clip();kitPatDraw(c,k.pattern|0,w,h,k.accent);c.restore()}});
+    fill("Calcoes",k.shorts);fill("Meias",k.socks);
+    tex.needsUpdate=true;
+  };
+  const img=new Image();img.onload=()=>{at.img=img;at.ready=true;at.paint(at.kit||{shirt:"#fff",shorts:"#fff",socks:"#fff",accent:"#000",pattern:0});at.mats.forEach(m=>{m.visible=true})};img.src="modelos/equipas/"+id+".jpg";
+  return at;
+}
 function glbMatSet(look){
-  const code=look.code||"",id=GLBM.TEAM[code]||"petro_luanda",cu=look.kit&&look.kit.custom&&!look.ref&&!look.gk,key=look.ref?"ref":look.gk?"gk|"+code+"|"+look.gkShirt:cu?"cus|"+id+"|"+look.kit.shirt+look.kit.shorts+look.kit.socks:id;
+  const code=look.code||"",id=GLBM.TEAM[code]||"petro_luanda",cu=look.kit&&look.kit.custom&&!look.ref&&!look.gk,key=look.ref?"ref":look.gk?"gk|"+code+"|"+look.gkShirt:cu?"cus|"+id+"|"+[look.kit.shirt,look.kit.accent,look.kit.shorts,look.kit.socks,look.kit.pattern|0].join():id;
   if(GLBM.mats[key])return GLBM.mats[key];
   const tex=glbTeamTex(id),mk=(o)=>new T.MeshLambertMaterial(Object.assign({emissive:0x1a1a1a},o)),set={};
   for(const part of ["Cabeca","Bracos","Camisola","Calcoes","Pernas","Meias","Chuteiras"])set[part]=mk({map:tex});
-  if(look.kit&&look.kit.custom&&!look.ref&&!look.gk){const kk=look.kit;set.Camisola=mk({color:new T.Color(kk.shirt)});set.Calcoes=mk({color:new T.Color(kk.shorts)});set.Meias=mk({color:new T.Color(kk.socks)})}
+  if(cu){const at=makeKitAtlas(id);at.paint(look.kit);for(const part of ["Cabeca","Bracos","Camisola","Calcoes","Pernas","Meias","Chuteiras"])set[part]=mk({map:at.tex});for(const k in set){set[k].visible=at.ready;at.mats.push(set[k])}return GLBM.mats[key]=set}
   if(look.ref){for(const p of ["Camisola","Calcoes","Meias"])set[p]=mk({color:0x16181b});set.Meias.color.set(0x111111)}
   else if(look.gk){set.Camisola=mk({color:new T.Color(look.gkShirt||"#22c3b5")});set.Calcoes=mk({color:0x1d1d1d});set.Meias=mk({color:0x1d1d1d})}
   if(!tex.userData.ready){tex.userData.mats=tex.userData.mats||[];for(const k in set){set[k].visible=false;tex.userData.mats.push(set[k])}}
@@ -542,7 +595,7 @@ function glbLook(h,look){
   for(const k in m){if(set[k])m[k].material=set[k]}
   glbNumber(h,look);
 }
-window.__glb={load:glbLoad,look:glbLook};
+window.__glb={load:glbLoad,look:glbLook,atlas:makeKitAtlas,pat:kitPatDraw,team:GLBM.TEAM};
 const GL_LOOP=new Set(["Idle_Respirar","Idle_Atento","Andar","Correr","Sprint","Correr_Tras","Passo_Lateral","Conducao_Bola"]);
 function glAct(h,name){
   const g=h.gl;if(g.act[name])return g.act[name];
