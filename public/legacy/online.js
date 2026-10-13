@@ -344,7 +344,7 @@ function enviarInput() {
   if (input.shootPressed) ST.pend.sh = 1; if (input.passPressed) ST.pend.pa = 1; if (input.switchPressed) ST.pend.sw = 1;
   if (tickIn % 2) return;                                          // 30 Hz
   var x = guest ? -input.x : input.x, y = guest ? -input.y : input.y;
-  var f = (input.sprint ? 1 : 0) | (input.shootHeld ? 2 : 0) | (ST.pend.sh ? 4 : 0) | (ST.pend.pa ? 8 : 0) | (ST.pend.sw ? 16 : 0) | (input.through ? 32 : 0);
+  var f = (input.sprint ? 1 : 0) | (input.shootHeld ? 2 : 0) | (ST.pend.sh ? 4 : 0) | (ST.pend.pa ? 8 : 0) | (ST.pend.sw ? 16 : 0) | (input.through ? 32 : 0) | (input.passHeld ? 64 : 0) | (input.dribble ? 128 : 0) | (input.cancelPressed ? 256 : 0);
   var seq = ++ST.seq;
   ST.hist.push({ seq: seq, sx: x, sy: y, sprint: !!input.sprint });
   if (ST.hist.length > 60) ST.hist.shift();

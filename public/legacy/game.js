@@ -80,17 +80,17 @@ function saveWarning(){SAVE_FAILED=true;if(!document.body)return;let el=document
 function sSet(k,v){if(!STORAGE_OK){saveWarning();return false}try{localStorage.setItem(k,v);return true}catch(e){saveWarning();return false}}
 
 /* Preferências */
-const DEFAULT_KEYS={up:["KeyW","ArrowUp"],down:["KeyS","ArrowDown"],left:["KeyA","ArrowLeft"],right:["KeyD","ArrowRight"],pass:["KeyX",""],shoot:["Space",""],switch:["KeyC",""],sprint:["ShiftLeft","ShiftRight"],pause:["KeyP","Escape"]};
-const ACTIONS=[["up","Mover para cima"],["down","Mover para baixo"],["left","Mover para a esquerda"],["right","Mover para a direita"],["pass","Passe"],["shoot","Remate (com bola) / desarme (sem bola)"],["switch","Trocar de jogador"],["sprint","Sprint"],["pause","Pausa"]];
+const DEFAULT_KEYS={up:["KeyW","ArrowUp"],down:["KeyS","ArrowDown"],left:["KeyA","ArrowLeft"],right:["KeyD","ArrowRight"],pass:["KeyX",""],shoot:["Space",""],switch:["KeyC",""],sprint:["ShiftLeft","ShiftRight"],pause:["KeyP","Escape"],dribble:["KeyZ",""],cancel:["KeyV",""]};
+const ACTIONS=[["up","Mover para cima"],["down","Mover para baixo"],["left","Mover para a esquerda"],["right","Mover para a direita"],["pass","Passe"],["shoot","Remate (com bola) / desarme (sem bola)"],["switch","Trocar de jogador"],["sprint","Sprint"],["dribble","Drible (mais lento, bola junto ao pé)"],["cancel","Cancelar passe ou remate carregado"],["pause","Pausa"]];
 function defaultPrefs(){let rm=false;try{rm=matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){}
-  return{v:1,diff:"normal",keys:JSON.parse(JSON.stringify(DEFAULT_KEYS)),autoSwitch:"assist",reduceFx:rm,replays:true,rules:"classic",tactic:"bal",form:"221",legs:1,sound:true,tutorialSeen:false,camera:"tv",camZoom:1,offsideVar:true,daytime:"night",stadium:"imbondeiro",crowd:"auto",ballDesign:"auto",musicVol:.6,sfxVol:.9,crowdVol:.8,musicStyle:"auto",gameMusic:"low",passAssist:"assist",shotStyle:"power",quality:"high",touchScale:1}}
+  return{v:1,fatigue:true,shotTiming:false,timingWin:90,diff:"normal",keys:JSON.parse(JSON.stringify(DEFAULT_KEYS)),autoSwitch:"assist",reduceFx:rm,replays:true,rules:"classic",tactic:"bal",form:"221",legs:1,sound:true,tutorialSeen:false,camera:"tv",camZoom:1,offsideVar:true,daytime:"night",stadium:"imbondeiro",crowd:"auto",ballDesign:"auto",musicVol:.6,sfxVol:.9,crowdVol:.8,musicStyle:"auto",gameMusic:"low",passAssist:"assist",shotStyle:"power",quality:"high",touchScale:1}}
 function loadPrefs(){
   const d=defaultPrefs(),raw=parseJSON(sGet(K.prefs)||"null");
   if(raw&&typeof raw==="object"&&!Array.isArray(raw)){
     if(DIFF[raw.diff])d.diff=raw.diff;
     if(raw.keys&&typeof raw.keys==="object")for(const a in DEFAULT_KEYS){const v=raw.keys[a];if(Array.isArray(v)&&v.length===2&&v.every(x=>typeof x==="string"&&/^([A-Za-z][A-Za-z0-9]{0,39})?$/.test(x)))d.keys[a]=v.slice()}
     if(raw.autoSwitch==="manual"||raw.autoSwitch==="assist")d.autoSwitch=raw.autoSwitch;
-    for(const k of ["reduceFx","replays","sound","tutorialSeen","offsideVar","uiSfx"])if(typeof raw[k]==="boolean")d[k]=raw[k];
+    for(const k of ["reduceFx","replays","sound","tutorialSeen","offsideVar","uiSfx","fatigue","shotTiming"])if(typeof raw[k]==="boolean")d[k]=raw[k];
     if(RULES[raw.rules])d.rules=raw.rules; if(TACTICS[raw.tactic])d.tactic=raw.tactic; if(FORMS[raw.form])d.form=raw.form;
     if(raw.legs===1||raw.legs===2)d.legs=raw.legs;
     if(raw.daytime==="day"||raw.daytime==="night")d.daytime=raw.daytime;
@@ -103,6 +103,7 @@ function loadPrefs(){
     for(const k of ["musicVol","sfxVol","crowdVol","ballVol","refVol","uiVol"])if(typeof raw[k]==="number"&&raw[k]>=0&&raw[k]<=1)d[k]=raw[k];
     if(["auto","semba","kizomba","kuduro","off"].includes(raw.musicStyle))d.musicStyle=raw.musicStyle;
     if(["low","normal","off"].includes(raw.gameMusic))d.gameMusic=raw.gameMusic;
+    if([60,90,140].includes(raw.timingWin))d.timingWin=raw.timingWin;
     if(["assist","manual"].includes(raw.passAssist))d.passAssist=raw.passAssist;
     if(["power","placed"].includes(raw.shotStyle))d.shotStyle=raw.shotStyle;
     if(["low","medium","high"].includes(raw.quality))d.quality=raw.quality;
@@ -210,7 +211,7 @@ const cosm=(k)=>COSM[k].find(c=>c.id===C.cos[k])||COSM[k][0];
 /* ================= Motor do jogo ================= */
 const W=1000,H=620,X0=40,X1=960,Y0=40,Y1=580,GH=110,GY0=H/2-GH/2,GY1=H/2+GH/2,DT=1/60,MATCH_LEN=150;
 /* bola no ar: altura em unidades do jogo (15 u = 1 m). A barra fica a 36,6 u (2,44 m). A gravidade é maior que a real (arcade) para que as trajetórias se vejam no ritmo do jogo. */
-const BAR_H=36.6,GRAV=.07,POST_R=3.5;
+const BAR_H=36.6,GRAV=.07,POST_R=3.5,SHOT_CONTACT=.14;
 const NP=12,RF=NP*6+5,RN=240; // buffer de replay: 4 s a 60 imagens/s
 const sd=t=>G&&G.swap?1-t:t; // lado do campo da equipa: troca na 2.ª parte
 const pxOf=(t,nx)=>sd(t)===0?X0+nx*(X1-X0):X1-nx*(X1-X0), pyOf=ny=>Y0+ny*(Y1-Y0);
@@ -278,7 +279,7 @@ function step(){
     case "half":if(input.shootPressed||input.passPressed)startSecondHalf();break;
     case "end":G.st-=DT;if(G.st<=0&&!G.ended){G.ended=true;finishMatch()}break;
   }
-  input.shootPressed=input.passPressed=input.switchPressed=false;
+  input.shootPressed=input.passPressed=input.switchPressed=input.cancelPressed=false;
 }
 function stepPlay(){
   G.t+=DT;
@@ -305,7 +306,8 @@ function stepPlay(){
 }
 function brains(){for(let t=0;t<2;t++){G.brainT[t]-=DT;if(G.brainT[t]<=0){G.brainT[t]=t===1?Math.max(.15,G.D.think*.75):.22;teamBrain(t)}}}
 function toHalf(){G.state="half";G.msg="";G.ball.owner=null;G.ball.pend=null;sfx("whistle",2);showHalf()}
-function startSecondHalf(){if(!G||G.state!=="half")return;hideOverlay();G.half=2;G.swap=true;G.t=MATCH_LEN/2;setupKickoff(1-G.firstKick)}
+function startSecondHalf(){if(!G||G.state!=="half")return;hideOverlay();for(const p of G.players)p.stam=Math.min(1,(p.stam==null?1:p.stam)+.3);   // o intervalo repõe parte do fôlego
+  G.half=2;G.swap=true;G.t=MATCH_LEN/2;setupKickoff(1-G.firstKick)}
 function toEnd(){G.t=MATCH_LEN;G.state="end";G.st=2.2;G.msg="Apito final";G.msgSub=`${G.teams[0].s} ${G.score[0]} – ${G.score[1]} ${G.teams[1].s}`;G.ball.owner=null;G.ball.pend=null;sfx("whistle",3)}
 
 /* roda a orientação (p.hd, em radianos) para o alvo com velocidade limitada: rápida parado, mais lenta em sprint; sincroniza se fx/fy foram mudados de fora */
@@ -313,7 +315,7 @@ function turnHeading(p,wx,wy){
   if(p.hd===undefined||Math.hypot(p.fx-Math.cos(p.hd),p.fy-Math.sin(p.hd))>.02)p.hd=Math.atan2(p.fy,p.fx);
   p.turn=0;
   if(wx==null||p.dash>0)return;
-  const sp=Math.hypot(p.vx,p.vy),mx=Math.max(1,p.sp*1.38),rate=(13-6.5*clamp(sp/mx,0,1))*(p.stun>0?.2:1)*(p.role==="GK"?.85:1);
+  const sp=Math.hypot(p.vx,p.vy),mx=Math.max(1,p.sp*1.38),rate=(13-6.5*clamp(sp/mx,0,1))*(p.stun>0?.2:1)*(p.role==="GK"?.85:1)*(p.dribble?1.5:1);
   let d=Math.atan2(wy,wx)-p.hd;d=Math.atan2(Math.sin(d),Math.cos(d));
   const st=clamp(d,-rate*DT,rate*DT);p.hd+=st;p.turn=Math.abs(st);
   p.fx=Math.cos(p.hd);p.fy=Math.sin(p.hd);
@@ -323,11 +325,13 @@ function movePlayers(){
     if(p.off)continue;
     const moving=Math.hypot(p.dx,p.dy)>.4;
     if(p.tired&&p.energy>.3)p.tired=false;
-    const spr=p.sprint&&moving&&!p.tired&&p.energy>0&&p.stun<=0;
-    if(spr){p.energy-=.3*DT;if(p.energy<=0){p.energy=0;p.tired=true}}
+    const spr=p.sprint&&moving&&!p.tired&&p.energy>0&&p.stun<=0&&!p.dribble;
+    const fat=PREF.fatigue!==false&&!G.tut,st=p.stam==null?1:p.stam;
+    if(fat){const run=Math.hypot(p.vx,p.vy)/Math.max(1,p.sp);p.stam=clamp(st-DT*run*.0028*(spr?1.7:1)+(run<.25?DT*.004:0),.4,1)}      // fôlego: desce devagar com a corrida e recupera um pouco quando abranda; mínimo 40%
+    if(spr){p.energy-=.3*DT*(fat?1+(1-st)*.5:1);if(p.energy<=0){p.energy=0;p.tired=true}}
     else p.energy=Math.min(1,p.energy+(moving?.07:.16)*DT);
     p.sprinting=spr;
-    const f=(spr?1.38:1)*(.88+.12*Math.min(1,p.energy/.25));
+    const f=(spr?1.38:1)*(.88+.12*Math.min(1,p.energy/.25))*(fat?.9+.1*st:1)*(p.dribble?.64:1);
     const k=p.dash>0?.4:.2;
     if(p.dive){const d=p.dive,rem=d.ty-p.y;if(d.t<d.dur&&rem*d.side>.8)p.vy=d.side*Math.min(d.v,Math.abs(rem)*.5+.7);else p.vy*=.82;p.vx*=.9}
     else if(p.dash>0){p.vx+=(p.dx*f-p.vx)*k;p.vy+=(p.dy*f-p.vy)*k}
@@ -336,7 +340,7 @@ function movePlayers(){
       const tx=p.dx*f,ty=p.dy*f,ex=tx-p.vx,ey=ty-p.vy,em=Math.hypot(ex,ey),sp0=Math.hypot(p.vx,p.vy),spT=Math.hypot(tx,ty);
       let lim=spT>=sp0?.1:.19;
       if(sp0>.8&&spT>.3&&(p.vx*tx+p.vy*ty)/(sp0*spT)<.3)lim=.24;
-      lim*=(p.role==="GK"?1.25:1)*(1+.1*(p.rating-60)/40);
+      lim*=(p.role==="GK"?1.25:1)*(1+.1*(p.rating-60)/40)*(fat?.85+.15*st:1);      // cansado acelera menos
       if(em>lim){p.vx+=ex/em*lim;p.vy+=ey/em*lim}else{p.vx=tx;p.vy=ty}
     }
     if(p.stun>0){p.vx*=.85;p.vy*=.85}
@@ -374,11 +378,36 @@ function humanInput(){
   G.aim=rm>.3?{x:rx/rm,y:ry/rm}:null;
   const has=b.owner===p;
   if(input.switchPressed&&!has){manualSwitch();return}
-  if(input.passPressed)G.passBuffer=.20;if((G.passBuffer||0)>0){G.passBuffer=Math.max(0,G.passBuffer-DT);if(has){humanPass(p);G.passBuffer=0;return}}
+  p.dribble=!!input.dribble&&p.stun<=0;
+  if(!has){G.passCharge=null;if(G.pendShot){G.pendShot=null;p.kickAnim=0}}
+  /* passe: toque curto = passe normal (moderado, fácil de receber); manter e largar = passe tenso (mais rápido, mais difícil de dominar); V cancela antes de largar */
+  if(input.passPressed)G.passBuffer=.20;
+  if((G.passBuffer||0)>0){G.passBuffer=Math.max(0,G.passBuffer-DT);if(has&&!G.passCharge){G.passBuffer=0;if(input.passHeld)G.passCharge={t:0};else{humanPass(p,0);return}}}
+  if(G.passCharge&&has){
+    G.passCharge.t+=DT;
+    if(input.cancelPressed){G.passCharge=null}
+    else if(!input.passHeld||G.passCharge.t>=.7){const t=G.passCharge.t;G.passCharge=null;humanPass(p,t);return}
+  }
+  /* remate com temporização (opcional): entre largar e o contacto há uma janela em que um segundo toque melhora a precisão */
+  if(G.pendShot){
+    const ps=G.pendShot;ps.t+=DT;
+    if(input.cancelPressed){G.pendShot=null;p.kickAnim=0;G.needRelease=true}
+    else{
+      if(input.shootPressed&&ps.tp==null)ps.tp=ps.t;
+      if(ps.t>=SHOT_CONTACT){
+        const w=(PREF.timingWin||90)/1000,d=ps.tp==null?null:Math.abs(ps.tp-SHOT_CONTACT);
+        const nm=d==null?1.1:d<=w?.45:d<=w*2.2?1.5:1.8;      // 1,1 sem segundo toque · .45 no momento certo · 1,5 cedo/tarde · 1,8 muito fora
+        G.pendShot=null;shoot(p,ps.c,ps.iy,nm);return}
+    }
+  }
   if(G.needRelease){if(!input.shootHeld)G.needRelease=false;else return}
   if(has){
-    if(input.shootHeld){G.charging=true;G.charge=Math.min(1,G.charge+DT/.75)}
-    else if(G.charging){shoot(p,G.charge,rm>.3?ry/rm:0);G.charging=false;G.charge=0}
+    if(G.pendShot||G.passCharge){G.charging=false;G.charge=0}
+    else if(input.shootHeld){if(input.cancelPressed){G.charging=false;G.charge=0;G.needRelease=true}else{G.charging=true;G.charge=Math.min(1,G.charge+DT/.75)}}
+    else if(G.charging){
+      if(PREF.shotTiming&&!G.tut){G.pendShot={c:G.charge,iy:rm>.3?ry/rm:0,t:0,tp:null};p.kickAnim=.65}
+      else shoot(p,G.charge,rm>.3?ry/rm:0);
+      G.charging=false;G.charge=0}
   }else{
     G.charging=false;G.charge=0;
     if(input.shootPressed&&G.tackleCd<=0&&p.stun<=0){
@@ -405,15 +434,18 @@ function choosePassTarget(p){
   }
   return best;
 }
-function humanPass(p){
-  const q=G.passTarget||choosePassTarget(p);
-  if(PREF.passAssist==="manual"){input.through=false;const a=G.aim||{x:p.fx,y:p.fy};kick(p,p.x+a.x*250,p.y+a.y*250,8,.01);G.ball.pend={type:"pass",team:p.team,from:p,to:null};G.stats[p.team].passA++;return}
+function humanPass(p,held){
+  const q=G.passTarget||choosePassTarget(p),tense=(held||0)>=.22,pw=tense?clamp(((held||0)-.22)/.48,0,1):0,ms=tense?8.8+pw*3:7.4;
+  if(PREF.passAssist==="manual"){input.through=false;const a=G.aim||{x:p.fx,y:p.fy};kick(p,p.x+a.x*250,p.y+a.y*250,tense?9+pw*3:6.8,tense?.02:.01);G.ball.pend={type:"pass",team:p.team,from:p,to:null,tense};G.stats[p.team].passA++;return}
   if(!q)return;
-  if(input.sprint||input.through){input.through=false;const dr=sd(p.team)===0?1:-1,v0=9,L=leadPoint(p,q,v0,{x:dr*70,y:0}),tx=L.x,ty=L.y;kick(p,tx,ty,clamp(3.5+Math.hypot(tx-p.x,ty-p.y)*.022,6.5,v0),.01);G.ball.pend={type:"pass",team:p.team,from:p,to:q};G.stats[p.team].passA++}else passTo(p,q,.6);
+  if(input.sprint||input.through){input.through=false;const dr=sd(p.team)===0?1:-1,v0=9,L=leadPoint(p,q,v0,{x:dr*70,y:0}),tx=L.x,ty=L.y;kick(p,tx,ty,clamp(3.5+Math.hypot(tx-p.x,ty-p.y)*.022,6.5,v0),.01);G.ball.pend={type:"pass",team:p.team,from:p,to:q};G.stats[p.team].passA++}else{passTo(p,q,tense?.9:.6,ms,tense?1.3+.4*pw:1);if(tense&&G.ball.pend)G.ball.pend.tense=true}
 }
 
 /* ---------- Ações sobre a bola ---------- */
+/* qualidade de execução: jogadores mais fortes falham menos; o cansaço aumenta o erro (até +35%) */
+const execQ=p=>clamp(1.3-(p.rating||65)/150,.7,1)*(PREF.fatigue===false?1:1+(1-(p.stam==null?1:p.stam))*.35);
 function kick(p,tx,ty,spd,noise,lift,spin){
+  noise=(noise||0)*execQ(p);
   const b=G.ball,a=Math.atan2(ty-b.y,tx-b.x)+rnd(-(noise||0),noise||0);
   b.owner=null;b.kt=0;b.vx=Math.cos(a)*spd;b.vy=Math.sin(a)*spd;b.lastTeam=p.team;b.last=p;p.kickCd=.28;p.kickAnim=.65;
   b.vz=lift>0?lift:0;b.z=lift>0?2:0;b.sp=spin||0;       // lift: velocidade vertical de saída; spin: efeito lateral (+ curva para a direita da trajetória)
@@ -430,10 +462,10 @@ function leadPoint(p,q,v0,extra){
 }
 /* tempo (em imagens) que a bola demora a percorrer d com a velocidade inicial v0 (a bola perde velocidade a ritmo constante) */
 function flightSteps(d,v0){const r=Math.min(.96,d*.022/v0);return r>0?Math.log(1-r)/Math.log(.978):0}
-function passTo(p,q,noiseMult,maxSpd){
+function passTo(p,q,noiseMult,maxSpd,boost){
   if(!q)return;
-  const d0=dist(p,q),v0=clamp(3.5+d0*.022,4.4,maxSpd||9.8),L=leadPoint(p,q,v0),d=Math.hypot(L.x-p.x,L.y-p.y);
-  const vp=clamp(3.5+d*.022,4.4,maxSpd||9.8),lob=d>300?Math.min(3.4,GRAV*flightSteps(d,vp)/2*.92):0;      // passe longo: bola no ar, aterra junto ao colega
+  const bo=boost||1,d0=dist(p,q),v0=clamp((3.5+d0*.022)*bo,4.4,maxSpd||9.8),L=leadPoint(p,q,v0),d=Math.hypot(L.x-p.x,L.y-p.y);
+  const vp=clamp((3.5+d*.022)*bo,4.4,maxSpd||9.8),lob=d>300?Math.min(3.4,GRAV*flightSteps(d,vp)/2*.92):0;      // passe longo: bola no ar, aterra junto ao colega
   kick(p,L.x,L.y,vp,(.008+d/18000)*(noiseMult||1),lob,rnd(-.25,.25)*(lob?1:0));
   G.ball.pend={type:"pass",team:p.team,from:p,to:q};G.stats[p.team].passA++;
 }
@@ -444,14 +476,15 @@ function cross(p,team){
   kick(p,tx,ty,vc,.04,Math.min(3.2,GRAV*flightSteps(dc,vc)/2*.9),rnd(-.45,.45));      // cruzamento: bola alta com algum efeito
   G.ball.pend={type:"pass",team,from:p,to:recv};G.stats[team].passA++;
 }
-function shoot(p,c,iy){
+function shoot(p,c,iy,nm){
+  nm=nm||1;
   crowdEvent("shot");
   const gx=sd(p.team)===0?X1+6:X0-6;
-  const ty=Math.abs(iy)>.2?H/2+iy*(GH/2-14):H/2+(p.y<H/2?1:-1)*rnd(12,52);
+  const ty=(Math.abs(iy)>.2?H/2+iy*(GH/2-14):H/2+(p.y<H/2?1:-1)*rnd(12,52))+(nm!==1?rnd(-10,10)*(nm-.45):0);
   const d=Math.abs(gx-p.x);
   const vs=PREF.shotStyle==="placed"?7+c*4:7.5+c*7.5,placed=PREF.shotStyle==="placed";
   const elev=Math.max(0,.02+c*.055+(c>.8&&!placed?rnd(-.03,.075):rnd(-.02,.03)));      // tangente do ângulo de saída
-  kick(p,gx,ty,vs,(placed?.012:.025)+(1-c)*.04+d/9000,vs*elev,rnd(-1,1)*.5*(.3+c));
+  kick(p,gx,ty,vs,((placed?.012:.025)+(1-c)*.04+d/9000)*nm,vs*elev,rnd(-1,1)*.5*(.3+c));
   G.ball.pend={type:"shot",team:p.team};G.stats[p.team].shots++;
   if(c>.85){G.hot=1.6;burst("spark",G.ball.x,G.ball.y,16,["#ffb020","#ff5a1f","#ffffff"],4,.45,3);if(!PREF.reduceFx)G.shake=Math.max(G.shake,.15)}
 }
@@ -477,9 +510,9 @@ function onDeflectGK(gk){const b=G.ball,pd=b.pend;if(pd&&pd.type==="shot"&&gk.te
 function ballPhysics(live){
   const b=G.ball,classic=!G.tut;
   if(b.owner){
-    const o=b.owner,sp=Math.hypot(o.vx,o.vy),off=10+(sp>.6?3.6*(.5+.5*Math.sin(o.run*1.15)):0);
+    const o=b.owner,sp=Math.hypot(o.vx,o.vy),off=(10+(sp>.6?3.6*(.5+.5*Math.sin(o.run*1.15)):0))*(o.dribble?.75:1);
     b.z=0;b.vz=0;b.sp=0;
-    if(live&&o.role!=="GK"&&o.sprinting&&o.turnAcc>1.5&&sp>.75*o.sp&&Math.random()<.03){      // viragem brusca em sprint: o toque sai mais comprido e a bola fica solta
+    if(live&&o.role!=="GK"&&!o.dribble&&o.sprinting&&o.turnAcc>1.5&&sp>.75*o.sp&&Math.random()<.03){      // viragem brusca em sprint: o toque sai mais comprido e a bola fica solta
       o.turnAcc=0;b.owner=null;b.kt=0;b.vx=o.vx*1.35;b.vy=o.vy*1.35;o.kickCd=.22;b.lastTeam=o.team;b.last=o;return}
     b.x+=(o.x+o.fx*off-b.x)*.6;b.y+=(o.y+o.fy*off-b.y)*.6;b.vx=o.vx;b.vy=o.vy;
     const inM=b.y>GY0+4&&b.y<GY1-4;
@@ -530,7 +563,12 @@ function ballPhysics(live){
     if(ok&&best.dive&&s>8&&Math.random()<.5){onDeflectGK(best);b.vx=-b.vx*.3;b.vy=best.dive.side*rnd(1.2,4.2);best.kickCd=.45;sfx("kick",6);burst("spark",b.x,b.y,10,["#ffffff","#cfe8ff"],3.2,.3,2.5);return}
     if(!ok){onDeflectGK(best);b.vx=-b.vx*.45+rnd(-1.5,1.5);b.vy=b.vy*.6+rnd(-3,3);best.kickCd=.45;sfx("kick",5);burst("spark",b.x,b.y,12,["#ffffff","#cfe8ff"],3.5,.3,2.5);return}
     if(s>5){ring(b.x,b.y,"#f2b705");if(!best.dive&&!(best.gkJump>0))best.gkJump=.6}
-  }else if(s>8.5&&Math.random()>=(G.o.diff==="easy"&&best.team===0?.82:.3)){best.kickCd=.2;return}
+  }else if(s>8.5){
+    // passes tensos e remates difíceis de dominar: melhor atributo amortece melhor; bola no ar piora; fadiga piora
+    let acc=clamp(.34+((best.rating||65)-60)/110-(b.z>6?.12:0)-(PREF.fatigue===false?0:(1-(best.stam==null?1:best.stam))*.12),.15,.85);
+    if(G.o.diff==="easy"&&best.team===0)acc=Math.max(acc,.82);
+    if(Math.random()>=acc){best.kickCd=.2;return}
+  }
   if(typeof checkOffside==="function"&&checkOffside(best))return;
   const inc=s;onGain(best);b.owner=best;best.kickCd=0;
   if(inc>3.5&&best.role!=="GK"){const k=inc>7?.6:.8;best.vx*=k;best.vy*=k}
@@ -1305,12 +1343,12 @@ function readInput(){
   const k=1-Math.exp(-DT*(tx||ty?22:30));input.sx+=(tx-input.sx)*k;input.sy+=(ty-input.sy)*k;
   if(!tx&&!ty&&Math.hypot(input.sx,input.sy)<.03)input.sx=input.sy=0;
   input.x=input.sx;input.y=input.sy;
-  input.shootHeld=held("shoot")||input.tShoot;input.sprint=held("sprint")||input.tSprint;
+  input.shootHeld=held("shoot")||input.tShoot;input.sprint=held("sprint")||input.tSprint;input.passHeld=held("pass")||input.tPassHeld;input.dribble=held("dribble")||input.tDribble;
 }
 const JOY={id:null,ox:0,oy:0};
 function releaseAll(){
   input.through=false;input.keys={};input.jx=input.jy=0;input.sx=input.sy=input.tx=input.ty=0;input.tShoot=input.tSprint=false;input.shootHeld=input.sprint=false;
-  input.shootPressed=input.passPressed=input.switchPressed=false;JOY.id=null;
+  input.shootPressed=input.passPressed=input.switchPressed=input.cancelPressed=false;input.passHeld=input.dribble=input.tPassHeld=input.tDribble=false;JOY.id=null;
   document.querySelectorAll(".tb.on").forEach(b=>b.classList.remove("on"));
   const j=document.getElementById("joy");if(j)j.hidden=true;
 }
@@ -1327,7 +1365,7 @@ addEventListener("keydown",e=>{
   e.preventDefault();input.keys[e.code]=true;
   if(e.repeat)return;
   for(const a of acts){
-    if(a==="pass")input.passPressed=true;else if(a==="shoot")input.shootPressed=true;else if(a==="switch")input.switchPressed=true;
+    if(a==="pass")input.passPressed=true;else if(a==="shoot")input.shootPressed=true;else if(a==="switch")input.switchPressed=true;else if(a==="cancel")input.cancelPressed=true;
     else if(a==="pause"&&canPause())setPause(!G.paused);
   }
 },true);
@@ -1361,7 +1399,7 @@ function bindTouch(){
     el.addEventListener("contextmenu",e=>e.preventDefault());};
   document.querySelectorAll(".tb").forEach(b=>{b.style.minWidth=Math.round(58*PREF.touchScale)+"px";b.style.minHeight=Math.round(48*PREF.touchScale)+"px"});
   hold("tShoot",()=>{input.tShoot=true;input.shootPressed=true},()=>{input.tShoot=false});
-  hold("tPass",()=>{input.through=false;input.passPressed=true});
+  hold("tPass",()=>{input.through=false;input.passPressed=true;input.tPassHeld=true},()=>{input.tPassHeld=false});
   hold("tThrough",()=>{input.through=true;input.passPressed=true});
   hold("tSwap",()=>{input.switchPressed=true});
   hold("tSprint",()=>{input.tSprint=true},()=>{input.tSprint=false});
@@ -1432,7 +1470,7 @@ function hud(){
   if(playerEl&&playerEl.textContent!==playerText)playerEl.textContent=playerText;
   if(playerEl)playerEl.title=owner?`${owner.fullName} · ${teamText}`:playerText;
   const p=G.ctrl,en=document.getElementById("enBar");
-  if(p&&en){en.style.width=Math.round(p.energy*100)+"%";en.style.background=p.tired?"var(--red)":p.energy<.3?"var(--gold)":"var(--ok)"}
+  if(p&&en){const st=p.stam==null?1:p.stam,lv=Math.min(p.energy,.35+.65*st);en.style.width=Math.round(lv*100)+"%";if(en.parentElement&&en.parentElement.parentElement)en.parentElement.parentElement.title="Energia: sprint "+Math.round(p.energy*100)+"% · fôlego "+Math.round(st*100)+"%";en.style.background=p.tired?"var(--red)":p.energy<.3?"var(--gold)":"var(--ok)"}
   if(isTouch){const has=G.ball.owner&&G.ball.owner===G.ctrl,k=(has?"1":"0")+G.state;if(k!==tbCache){tbCache=k;
     document.getElementById("tShoot").textContent=G.state==="replay"?"Saltar":has?"Remate":"Desarme";
     document.getElementById("tPass").textContent=G.state==="half"?"Seguir":"Passe"}}
@@ -1797,6 +1835,9 @@ function showOptions(msg){
    <div class="panel"><p class="panel-title">Jogo</p>
      <label class="toggle"><span>Reduzir efeitos visuais (sem tremor, câmara lenta, flashes nem animações nas bancadas)</span><input type="checkbox" id="oFx" ${PREF.reduceFx?"checked":""}></label>
      <label class="toggle"><span>Mostrar replay dos golos</span><input type="checkbox" id="oRep" ${PREF.replays?"checked":""}></label>
+     <label class="toggle"><span>Fadiga: correr e fazer sprint cansa os jogadores (menos aceleração e mais erros)</span><input type="checkbox" id="oFat" ${PREF.fatigue!==false?"checked":""}></label>
+     <label class="toggle"><span>Remate com temporização: carrega uma segunda vez no momento do contacto para rematar com mais precisão</span><input type="checkbox" id="oTim" ${PREF.shotTiming?"checked":""}></label>
+     <div class="opt"><span class="panel-title">Janela de temporização</span>${segHTML("tim",[["60","Apertada"],["90","Normal"],["140","Larga"]],String(PREF.timingWin||90))}</div>
      <label class="toggle"><span>Som da multidão e batuque nas bancadas</span><input type="checkbox" id="oSnd" ${PREF.sound?"checked":""}></label>
      <div class="row"><button class="btn ghost small" id="oTut">Repetir tutorial</button></div></div>
   </section>`;
@@ -1809,6 +1850,9 @@ function showOptions(msg){
   document.getElementById("oFx").onchange=e=>{PREF.reduceFx=e.target.checked;savePrefs()};
   document.getElementById("oRep").onchange=e=>{PREF.replays=e.target.checked;savePrefs()};
   document.getElementById("oSnd").onchange=e=>{PREF.sound=e.target.checked;savePrefs()};
+  document.getElementById("oFat").onchange=e=>{PREF.fatigue=e.target.checked;savePrefs()};
+  document.getElementById("oTim").onchange=e=>{PREF.shotTiming=e.target.checked;savePrefs()};
+  bindSeg("tim",k=>{PREF.timingWin=+k;savePrefs()});
   app.querySelectorAll(".keybtn").forEach(b=>b.onclick=()=>{
     app.querySelectorAll(".keybtn.wait").forEach(x=>{x.classList.remove("wait");x.textContent=kn(PREF.keys[x.dataset.a][+x.dataset.s])});
     REBIND={a:b.dataset.a,s:+b.dataset.s};b.classList.add("wait");b.textContent="Prime uma tecla";Pop.keyWait(ACTIONS.find(x=>x[0]===b.dataset.a)[1],+b.dataset.s,()=>{REBIND=null;showOptions()});
