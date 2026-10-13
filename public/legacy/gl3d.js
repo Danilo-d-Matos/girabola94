@@ -1060,11 +1060,11 @@ function drawGL(c,V){
   // (a sombra elíptica já é desenhada no sprite)
   // bola
   const b=V.ball;
-  S.ballSp.position.set(b.x,BALL_R,b.y);
+  const bz=Math.max(0,b.z||0);S.ballSp.position.set(b.x,BALL_R+bz,b.y);
   {const pb=S.bprev,dx=pb?b.x-pb.x:0,dy=pb?b.y-pb.y:0,dd=Math.hypot(dx,dy);
    if(pb&&dd>.001&&dd<70){S.bq=S.bq||new T.Quaternion();S.bax=S.bax||new T.Vector3();S.bax.set(dy,0,-dx).normalize();S.bq.setFromAxisAngle(S.bax,dd/BALL_R);S.ballSp.quaternion.premultiply(S.bq)}
-   S.bprev={x:b.x,y:b.y}}
-  S.ballShadow.visible=true;S.ballShadow.position.set(b.x+.7,.2,b.y);S.ballShadow.scale.set(1.15,.55,1);
+   S.bprev={x:b.x,y:b.y};if(b.sp&&bz>.3)S.ballSp.rotateY(b.sp*.12)}
+  S.ballShadow.visible=true;S.ballShadow.position.set(b.x+.7+bz*.1,.2,b.y);{const k=1/(1+bz*.03);S.ballShadow.scale.set(1.15*k,.55*k,1);S.ballShadow.material.opacity=.32*k}
   S.hot.visible=!!V.hot;if(V.hot)S.hot.position.set(b.x,4,b.y);
   const tr=V.trail||[];
   for(let i=0;i<S.trail.length;i++){const s=S.trail[i];if(i<tr.length){const a=(i+1)/tr.length;s.visible=true;s.position.set(tr[i].x,3,tr[i].y);s.material.opacity=a*.5;s.material.color.set(V.hot?(i%2?0xff5a1f:0xffb020):0xffffff);const sz=(2.5*a+.5)*.9*2;s.scale.set(sz,sz,1)}else s.visible=false}
