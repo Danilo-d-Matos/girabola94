@@ -394,19 +394,20 @@ function humanInput(){
   const has=b.owner===p;
   if(input.switchPressed&&!has){manualSwitch();return}
   p.dribble=!!input.dribble&&p.stun<=0;
+  if(G.tut&&p.dribble&&Math.hypot(p.vx,p.vy)>.5)G.tut.dr=(G.tut.dr||0)+DT;
   if(!has){G.passCharge=null;if(G.pendShot){G.pendShot=null;p.kickAnim=0}}
   /* passe: toque curto = passe normal (moderado, fácil de receber); manter e largar = passe tenso (mais rápido, mais difícil de dominar); V cancela antes de largar */
   if(input.passPressed)G.passBuffer=.20;
   if((G.passBuffer||0)>0){G.passBuffer=Math.max(0,G.passBuffer-DT);if(has&&!G.passCharge){G.passBuffer=0;if(input.passHeld)G.passCharge={t:0};else{humanPass(p,0);return}}}
   if(G.passCharge&&has){
     G.passCharge.t+=DT;
-    if(input.cancelPressed){G.passCharge=null}
+    if(input.cancelPressed){G.passCharge=null;if(G.tut)G.tut.cancel=true}
     else if(!input.passHeld||G.passCharge.t>=.7){const t=G.passCharge.t;G.passCharge=null;humanPass(p,t);return}
   }
   /* remate com temporização (opcional): entre largar e o contacto há uma janela em que um segundo toque melhora a precisão */
   if(G.pendShot){
     const ps=G.pendShot;ps.t+=DT;
-    if(input.cancelPressed){G.pendShot=null;p.kickAnim=0;G.needRelease=true}
+    if(input.cancelPressed){G.pendShot=null;p.kickAnim=0;G.needRelease=true;if(G.tut)G.tut.cancel=true}
     else{
       if(input.shootPressed&&ps.tp==null)ps.tp=ps.t;
       if(ps.t>=SHOT_CONTACT){
@@ -418,7 +419,7 @@ function humanInput(){
   if(G.needRelease){if(!input.shootHeld)G.needRelease=false;else return}
   if(has){
     if(G.pendShot||G.passCharge){G.charging=false;G.charge=0}
-    else if(input.shootHeld){if(input.cancelPressed){G.charging=false;G.charge=0;G.needRelease=true}else{G.charging=true;G.charge=Math.min(1,G.charge+DT/.75)}}
+    else if(input.shootHeld){if(input.cancelPressed){G.charging=false;G.charge=0;G.needRelease=true;if(G.tut)G.tut.cancel=true}else{G.charging=true;G.charge=Math.min(1,G.charge+DT/.75)}}
     else if(G.charging){
       if(PREF.shotTiming&&!G.tut){G.pendShot={c:G.charge,iy:rm>.3?ry/rm:0,t:0,tp:null};p.kickAnim=.65}
       else shoot(p,G.charge,rm>.3?ry/rm:0);
@@ -452,6 +453,7 @@ function choosePassTarget(p){
   return best;
 }
 function humanPass(p,held){
+  if(G.tut&&held>=.22)G.tut.tense=true;
   const q=G.passTarget||choosePassTarget(p),tense=(held||0)>=.22,pw=tense?clamp(((held||0)-.22)/.48,0,1):0,ms=tense?8.8+pw*3:7.4;
   if(PREF.passAssist==="manual"){input.through=false;const a=G.aim||{x:p.fx,y:p.fy};kick(p,p.x+a.x*250,p.y+a.y*250,tense?9+pw*3:6.8,tense?.02:.01);G.ball.pend={type:"pass",team:p.team,from:p,to:null,tense};G.stats[p.team].passA++;return}
   if(!q)return;
@@ -1646,8 +1648,8 @@ function finishMatch(){
 }
 
 /* ================= Tutorial ================= */
-function tk(){return isTouch?{move:"o joystick (lado esquerdo)",sprint:"o botão Sprint",pass:"o botão Passe",shoot:"o botão Remate",tackle:"o botão Desarme",switch:"o botão Trocar"}
-  :{move:`${kp("up")}/${kp("left")}/${kp("down")}/${kp("right")}`,sprint:kp("sprint"),pass:kp("pass"),shoot:kp("shoot"),tackle:kp("shoot"),switch:kp("switch")}}
+function tk(){return isTouch?{move:"o joystick (lado esquerdo)",sprint:"o botão Sprint",pass:"o botão Passe",shoot:"o botão Remate",tackle:"o botão Desarme",switch:"o botão Trocar",dribble:"o botão Drible",cancel:"o botão Cancelar"}
+  :{move:`${kp("up")}/${kp("left")}/${kp("down")}/${kp("right")}`,sprint:kp("sprint"),pass:kp("pass"),shoot:kp("shoot"),tackle:kp("shoot"),switch:kp("switch"),dribble:kp("dribble"),cancel:kp("cancel")}}
 const TUT=[
  {t:"Mover",d:k=>`Usa ${k.move} para levar o jogador até ao círculo dourado.`,
   setup(P){tutPlace(P.A,260,310);P.b.owner=P.A;setCtrl(P.A);G.tut.marker={x:520,y:200}},check:()=>dist(G.ctrl,G.tut.marker)<26},
@@ -1657,7 +1659,7 @@ const TUT=[
   setup(P){tutPlace(P.A,380,310);tutPlace(P.B,600,200);tutPlace(P.F,600,430);P.b.owner=P.A;setCtrl(P.A)},check:()=>G.tut.passOK},
  {t:"Trocar de jogador",d:k=>`Sem bola, prime ${k.switch} para passares a controlar o colega mais perto da bola.`,
   setup(P){tutPlace(P.oppF,700,310);P.oppF.fx=-1;P.oppF.fy=0;P.b.owner=P.oppF;tutPlace(P.A,160,520);tutPlace(P.B,620,330);setCtrl(P.A)},check:()=>G.switches>G.tut.sw0},
- {t:"Desarme",moveOpp:true,d:k=>`Aproxima-te do adversário e prime ${k.tackle} para entrar ao carrinho e ficar com a bola.`,
+ {t:"Desarme",moveOpp:true,d:k=>`Aproxima-te do adversário e prime ${k.tackle}: parado é um desarme em pé (seguro); em sprint é carrinho (chega mais longe, mas se falhares ficas no chão). Entra de frente, nunca por trás.`,
   setup(P){tutPlace(P.oppF,640,310);P.b.owner=P.oppF;tutPlace(P.A,500,330);setCtrl(P.A)},check:()=>G.ball.owner&&G.ball.owner.team===0},
  {t:"Remate carregado",goalStep:true,d:k=>`Segura ${k.shoot} para carregar o remate (no máximo a barra fica vermelha e a bola pega fogo) e larga para rematar. Marca golo!`,
   setup(P){tutPlace(P.A,700,300);tutPlace(P.oppGK,X1-14,H/2);P.b.owner=P.A;setCtrl(P.A)},check:()=>G.tut.goal}
@@ -1675,14 +1677,21 @@ const TUT=[
   {t:"Penálti",d:k=>`A câmara fica por trás do marcador. Mira com ${k.move} (esquerda e direita), segura ${k.shoot} para dar força e larga para rematar. Muita força perde precisão.`,
    goalStep:true,setup(P){tutPlace(P.F,600,310);tutPlace(P.oppGK,X1-7,H/2);startPenalty(0,P.oppF,P.F)},check:()=>G.tut.goal},
   {t:"Fora de jogo",d:k=>`A linha branca marca o último defesa. O colega de cima está à frente dela, em fora de jogo. Passa a quem está em jogo (o de baixo).`,
-   setup(P){tutPlace(P.A,430,310);tutPlace(P.B,790,190);tutPlace(P.F,640,440);tutPlace(P.oppF,700,300);tutPlace(P.oppGK,X1-14,H/2);P.oppF.fx=-1;P.oppF.fy=0;P.b.owner=P.A;setCtrl(P.A);G.tut.allowOff=true;G.offLine={lineX:700,px:790,py:190,team:0,name:"",until:1e15,label:"FORA DE JOGO"}},check:()=>G.tut.passOK&&!G.tut.offDone}
+   setup(P){tutPlace(P.A,430,310);tutPlace(P.B,790,190);tutPlace(P.F,640,440);tutPlace(P.oppF,700,300);tutPlace(P.oppGK,X1-14,H/2);P.oppF.fx=-1;P.oppF.fy=0;P.b.owner=P.A;setCtrl(P.A);G.tut.allowOff=true;G.offLine={lineX:700,px:790,py:190,team:0,name:"",until:1e15,label:"FORA DE JOGO"}},check:()=>G.tut.passOK&&!G.tut.offDone},
+  {t:"Passe tenso",d:k=>`Segura ${k.pass} um instante antes de largar: o passe sai mais forte e chega mais depressa, mas é mais difícil de dominar. Passa ao colega assim.`,
+   setup(P){tutPlace(P.A,330,310);tutPlace(P.B,650,200);P.b.owner=P.A;setCtrl(P.A)},check:()=>G.tut.passOK&&G.tut.tense},
+  {t:"Drible",d:k=>`Segura ${k.dribble} enquanto te moves: o jogador protege a bola e vira mais depressa, mas corre mais devagar. Leva a bola até ao círculo dourado.`,
+   setup(P){tutPlace(P.A,260,310);tutPlace(P.oppF,430,250);P.oppF.fx=-1;P.oppF.fy=0;P.b.owner=P.A;setCtrl(P.A);G.tut.marker={x:560,y:210}},check:()=>G.tut.dr>.6&&dist(G.ctrl,G.tut.marker)<26},
+  {t:"Cancelar",d:k=>`Começa a carregar o remate (segura ${k.shoot}) e prime ${k.cancel} para desistir sem rematar. Útil quando um defesa te fecha o caminho.`,
+   setup(P){tutPlace(P.A,700,300);tutPlace(P.oppGK,X1-14,H/2);P.b.owner=P.A;setCtrl(P.A)},check:()=>G.tut.cancel&&!G.charging}
 ];
 function tutPlace(p,x,y){p.off=false;p.x=x;p.y=y;p.vx=p.vy=p.dx=p.dy=0;p.stun=0;p.kickCd=0;p.kickAnim=0;p.dash=0;p.energy=1;p.tired=false}
 const LESSONS=[
-  {id:"all",n:"Curso completo",d:"Todas as lições seguidas, das bases às bolas paradas, ao penálti e ao fora de jogo.",steps:[0,1,2,6,3,4,5,7,8,9,10,11,12]},
+  {id:"all",n:"Curso completo",d:"Todas as lições seguidas, das bases às bolas paradas, ao penálti e ao fora de jogo.",steps:[0,1,2,13,6,3,14,4,5,15,7,8,9,10,11,12]},
   {id:"mov",n:"Movimento",d:"Mover o jogador e usar o sprint com a barra de energia.",steps:[0,1]},
-  {id:"pas",n:"Passes",d:"Passe normal, passe em profundidade e trocar de jogador.",steps:[2,6,3]},
+  {id:"pas",n:"Passes",d:"Passe normal, passe tenso, passe em profundidade e trocar de jogador.",steps:[2,13,6,3]},
   {id:"def",n:"Defesa",d:"Desarmar o adversário e recuperar a bola.",steps:[4]},
+  {id:"dri",n:"Drible e cancelar",d:"Proteger a bola com o drible e desistir de um remate ou passe a tempo.",steps:[14,15]},
   {id:"rem",n:"Remate",d:"Remate carregado e remate colocado nos cantos da baliza.",steps:[5,7]},
   {id:"par",n:"Bolas paradas",d:"Cantos, lançamentos laterais e livres diretos.",steps:[8,9,10]},
   {id:"pen",n:"Penálti",d:"Marca da marca dos onze metros, com a câmara por trás do marcador.",steps:[11]},
@@ -1707,7 +1716,7 @@ function beginTutorial(les){
   G.state="play";G.msg="";tutGo(0);
 }
 function tutGo(i){
-  const T=G.tut;Object.assign(T,{step:i,t:0,goal:false,goalAny:false,passOK:false,thru:false,allowOff:false,offDone:false,spr:0,marker:null,done:false,wait:0,retry:0});G.offLine=null;G.pen=null;G.setp=null;for(const p of G.players){p.dive=null;p.gkDown=0;p.gkJump=0}
+  const T=G.tut;Object.assign(T,{step:i,t:0,goal:false,goalAny:false,passOK:false,thru:false,allowOff:false,offDone:false,spr:0,tense:false,dr:0,cancel:false,marker:null,done:false,wait:0,retry:0});G.offLine=null;G.pen=null;G.setp=null;for(const p of G.players){p.dive=null;p.gkDown=0;p.gkJump=0}
   for(const p of G.players)p.off=true;
   const b=G.ball;b.owner=null;b.vx=b.vy=0;b.pend=null;G.trail.length=0;G.hot=0;G.charging=false;G.charge=0;G.needRelease=input.shootHeld;G.msg="";G.state="play";
   const P={A:G.players[3],B:G.players[4],F:G.players[5],oppGK:G.players[6],oppF:G.players[11],b};
