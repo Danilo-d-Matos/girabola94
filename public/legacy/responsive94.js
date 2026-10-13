@@ -40,7 +40,7 @@ function mover(dir) {
     if (!ok) return;
     var custo = prim + sec * 2.2; if (custo < pior) { pior = custo; melhor = el; }
   });
-  if (melhor) { melhor.focus(); try { melhor.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (e) {} return true; }
+  if (melhor) { window.__navInput = performance.now(); melhor.focus(); try { melhor.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (e) {} return true; }
   return false;
 }
 function voltar() {

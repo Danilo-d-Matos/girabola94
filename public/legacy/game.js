@@ -90,7 +90,7 @@ function loadPrefs(){
     if(DIFF[raw.diff])d.diff=raw.diff;
     if(raw.keys&&typeof raw.keys==="object")for(const a in DEFAULT_KEYS){const v=raw.keys[a];if(Array.isArray(v)&&v.length===2&&v.every(x=>typeof x==="string"&&/^([A-Za-z][A-Za-z0-9]{0,39})?$/.test(x)))d.keys[a]=v.slice()}
     if(raw.autoSwitch==="manual"||raw.autoSwitch==="assist")d.autoSwitch=raw.autoSwitch;
-    for(const k of ["reduceFx","replays","sound","tutorialSeen","offsideVar"])if(typeof raw[k]==="boolean")d[k]=raw[k];
+    for(const k of ["reduceFx","replays","sound","tutorialSeen","offsideVar","uiSfx"])if(typeof raw[k]==="boolean")d[k]=raw[k];
     if(RULES[raw.rules])d.rules=raw.rules; if(TACTICS[raw.tactic])d.tactic=raw.tactic; if(FORMS[raw.form])d.form=raw.form;
     if(raw.legs===1||raw.legs===2)d.legs=raw.legs;
     if(raw.daytime==="day"||raw.daytime==="night")d.daytime=raw.daytime;
@@ -100,7 +100,7 @@ function loadPrefs(){
     if(["imbondeiro","classico","azul","marcal","bairro"].includes(raw.stadium))d.stadium=raw.stadium;
     if(raw.camera==="tv"||raw.camera==="top")d.camera=raw.camera;
     if(typeof raw.camZoom==="number"&&raw.camZoom>=.5&&raw.camZoom<=2.5)d.camZoom=raw.camZoom;
-    for(const k of ["musicVol","sfxVol","crowdVol"])if(typeof raw[k]==="number"&&raw[k]>=0&&raw[k]<=1)d[k]=raw[k];
+    for(const k of ["musicVol","sfxVol","crowdVol","ballVol","refVol","uiVol"])if(typeof raw[k]==="number"&&raw[k]>=0&&raw[k]<=1)d[k]=raw[k];
     if(["auto","semba","kizomba","kuduro","off"].includes(raw.musicStyle))d.musicStyle=raw.musicStyle;
     if(["low","normal","off"].includes(raw.gameMusic))d.gameMusic=raw.gameMusic;
     if(["assist","manual"].includes(raw.passAssist))d.passAssist=raw.passAssist;

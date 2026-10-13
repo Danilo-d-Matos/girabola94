@@ -18,7 +18,7 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 let root=null,toastRoot=null,stack=[];
 function reduce(){try{return (typeof PREF!=="undefined"&&PREF.reduceFx)||matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){return false}}
 function ensureRoot(){if(!root){root=document.createElement("div");root.id="popRoot";document.body.appendChild(root)}return root}
-function sfxClick(kind){try{if(typeof sfx==="function"&&typeof AC!=="undefined"&&AC)sfx(kind||"switch")}catch(e){}}
+function sfxClick(kind){try{if(kind==="goal"&&typeof sfx==="function"&&typeof AC!=="undefined"&&AC)sfx(kind)}catch(e){}}   // os cliques e a abertura dos menus têm o som de audio-menu.js
 
 function confetti(card,n){
   const cols=["#f6c744","#d52b47","#58d489","#ffffff","#3ec1ff"];

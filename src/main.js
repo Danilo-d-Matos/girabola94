@@ -32,6 +32,7 @@ const scripts = [
   "legacy/cam-zoom.js",
   "legacy/audio-engine.js",
   "legacy/audio-samples.js",
+  "legacy/audio-menu.js",
   "legacy/var-system.js",
   "legacy/fit-engine.js",
   "modelos/multidao.js",

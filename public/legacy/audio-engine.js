@@ -29,6 +29,7 @@ function tone(out,t,o){var os=c.createOscillator(),g=c.createGain();os.type=o.ty
 /* ---------- efeitos sonoros ---------- */
 function sfx(k,v){
   if(!PREF.sound)return;if(!c||c.state!=="running")return;
+  if(Aud.menuOn&&(k==="ui"||k==="popin"||k==="popout"))return;   // substituídos por audio-menu.js
   if(Aud.sample&&Aud.sample(k,v))return;
   var t=c.currentTime,out=sfxBus;
   switch(k){
@@ -225,9 +226,10 @@ var _sp=startSetPiece;startSetPiece=function(kind){_sp.apply(this,arguments);if(
 var _g=goal;goal=function(t){CR.resolved=true;var s0=G.score[0]+G.score[1];_g.apply(this,arguments);return};
 var _dg=onDeflectGK;onDeflectGK=function(){CR.resolved=true;return _dg.apply(this,arguments)};
 /* sons de interface */
-document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("button,.btn,.team,.chip");if(b&&!b.disabled&&c)sfx("ui")},true);
-var _po=Pop.open;Pop.open=function(o){if(c&&o){if(o.kind==="celebrate")fanfare();else sfx("popin")}return _po.apply(this,arguments)};
-var _pc=Pop.close;Pop.close=function(){if(c)sfx("popout");return _pc.apply(this,arguments)};
+/* os sons de clique dos menus vêm de audio-menu.js (gravações); estes só servem enquanto não carregam */
+document.addEventListener("click",function(e){if(Aud.menuOn)return;var b=e.target.closest&&e.target.closest("button,.btn,.team,.chip");if(b&&!b.disabled&&c)sfx("ui")},true);
+var _po=Pop.open;Pop.open=function(o){if(c&&o){if(o.kind==="celebrate")fanfare();else if(!Aud.menuOn)sfx("popin")}return _po.apply(this,arguments)};
+var _pc=Pop.close;Pop.close=function(){if(c&&!Aud.menuOn)sfx("popout");return _pc.apply(this,arguments)};
 /* ---------- opções de som ---------- */
 function slider(label,key,def){var d=document.createElement("label");d.className="aud-row";d.innerHTML='<span>'+label+'</span><input type="range" min="0" max="100" step="5" value="'+Math.round(nv(key,def)*100)+'"><b>'+Math.round(nv(key,def)*100)+'%</b>';
   var inp=d.querySelector("input"),out=d.querySelector("b");inp.addEventListener("input",function(){PREF[key]=inp.value/100;out.textContent=inp.value+"%";savePrefs();if(c)sfx("kick",6)});return d}
@@ -236,7 +238,7 @@ function seg(label,key,items,def){var d=document.createElement("div");d.classNam
 function injectOptions(){
   var o=document.querySelector(".options-screen");if(!o||o.querySelector(".aud-panel"))return;
   var p=document.createElement("div");p.className="panel aud-panel";p.innerHTML='<p class="panel-title">Som e música</p>';
-  p.appendChild(slider("Efeitos","sfxVol",.9));p.appendChild(slider("Bola","ballVol",1));p.appendChild(slider("Árbitro","refVol",1));p.appendChild(slider("Adeptos","crowdVol",.8));p.appendChild(slider("Música","musicVol",.6));
+  p.appendChild(slider("Efeitos","sfxVol",.9));if(window.MenuSfx)MenuSfx.options(p);p.appendChild(slider("Bola","ballVol",1));p.appendChild(slider("Árbitro","refVol",1));p.appendChild(slider("Adeptos","crowdVol",.8));p.appendChild(slider("Música","musicVol",.6));
   var n=document.createElement("p");n.className="note";n.textContent="A bola, os apitos e os adeptos usam gravações; a música e os sons de interface são gerados pelo jogo. O público reage aos remates, defesas, golos e faltas.";p.appendChild(n);
   o.appendChild(p);
 }

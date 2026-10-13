@@ -1,0 +1,23 @@
+GIRABOLA 94 — EFEITOS SONOROS DOS MENUS
+
+Áudio convertido para WAV mono, 44,1 kHz, PCM 16-bit, com nível ajustado e pequenos fades para evitar estalidos.
+
+Sugestão de utilização:
+- 02_confirmar_selecao.wav — Clique/seleção principal. Duração: 0.92 s.
+- 03_abrir_opcao.wav — Abrir opção ou submenu. Duração: 0.52 s.
+- 06_transicao_menu.wav — Transição curta entre ecrãs. Duração: 0.49 s.
+- 05_confirmar_acao.wav — Confirmação/ação importante. Duração: 2.17 s.
+- 01_navegar_menu.wav — Navegar ou mover seleção. Duração: 0.39 s.
+- 04_voltar_cancelar.wav — Voltar/cancelar. Duração: 0.26 s.
+
+Implementação recomendada:
+- Reproduzir 01 ao mover a seleção/foco, mas apenas uma vez por mudança e com volume baixo.
+- Reproduzir 02 ao selecionar um item principal.
+- Reproduzir 03 ao abrir um submenu ou opção.
+- Reproduzir 04 ao voltar/cancelar.
+- Reproduzir 05 ao confirmar uma ação importante ou iniciar um jogo.
+- Reproduzir 06 na transição entre ecrãs, sem sobrepor sons de clique.
+
+Volumes iniciais sugeridos: navegação 0,20; cliques 0,30; confirmação 0,35; transição 0,25 (escala 0–1). São valores de partida, ajustar após teste.
+
+Nota: a associação por função é uma proposta baseada nos nomes dos ficheiros; confirmar auditivamente cada som no jogo. Verificar as licenças/atribuições exigidas pelas fontes originais antes de distribuir ou comercializar o jogo.
