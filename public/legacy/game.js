@@ -288,7 +288,7 @@ function stepPlay(){
     if(G.t>=MATCH_LEN){toEnd();return}
   }
   G.switchLock-=DT;G.autoLock-=DT;G.tackleCd-=DT;
-  for(const p of G.players){if(p.off)continue;p.kickCd-=DT;p.stun-=DT;p.think-=DT;p.dash-=DT;p.gkHold-=DT;if(p.gkJump>0)p.gkJump-=DT;if(p.gkDown>0){p.gkDown-=DT;if(p.dive)p.dive.t+=DT;if(p.gkDown<=0)p.dive=null}if(p.dash<=0)p.tackling=false}
+  for(const p of G.players){if(p.off)continue;p.kickCd-=DT;p.stun-=DT;p.think-=DT;p.dash-=DT;p.gkHold-=DT;if(p.gkJump>0)p.gkJump-=DT;if(p.gkDown>0){p.gkDown-=DT;if(p.dive)p.dive.t+=DT;if(p.gkDown<=0)p.dive=null}if(p.dash<=0){if(p.tackling){if(p.tkSlide){p.stun=Math.max(p.stun,.3+.35*(p.tkSp||0));if(G.tk)G.tk.miss++}else p.kickCd=Math.max(p.kickCd,.25)}p.tackling=false}}
   brains();
   updateControl();
   if(!G.auto)humanInput();
@@ -412,7 +412,9 @@ function humanInput(){
     G.charging=false;G.charge=0;
     if(input.shootPressed&&G.tackleCd<=0&&p.stun<=0){
       const ow=b.owner,aim=ow?{x:b.x+ow.vx*6,y:b.y+ow.vy*6}:{x:b.x+b.vx*5,y:b.y+b.vy*5},tx=aim.x-p.x,ty=aim.y-p.y,d=Math.hypot(tx,ty)||1;
-      p.dash=.26;p.dashx=tx/d*p.sp*2;p.dashy=ty/d*p.sp*2;p.fx=tx/d;p.fy=ty/d;G.tackleCd=.7;p.tackling=true;p.energy=Math.max(0,p.energy-.06);
+      const sf=Math.hypot(p.vx,p.vy)/Math.max(1,p.sp),slide=(input.sprint||p.sprinting)&&sf>.7;      // em corrida → carrinho (alcance e risco maiores); parado/a andar → desarme em pé
+      p.tkSlide=slide;p.tkSp=Math.min(1.4,sf);p.tkDur=slide?.3:.15;p.tkRoll=false;
+      p.dash=p.tkDur;const k=slide?2:1.4;p.dashx=tx/d*p.sp*k;p.dashy=ty/d*p.sp*k;p.fx=tx/d;p.fy=ty/d;G.tackleCd=slide?.95:.5;p.tackling=true;p.energy=Math.max(0,p.energy-(slide?.07:.03));
     }
   }
 }
@@ -552,15 +554,19 @@ function ballPhysics(live){
   if(b.inNet&&(b.x<X0||b.x>X1)){if(b.z>BAR_H-3){b.z=BAR_H-3;b.vz=-Math.abs(b.vz)*.3}b.y=clamp(b.y,GY0+5,GY1-5);if(b.x<X0-24){b.x=X0-24;b.vx=Math.abs(b.vx)*.15}if(b.x>X1+24){b.x=X1+24;b.vx=-Math.abs(b.vx)*.15}}
   if(!live)return;
   let best=null,bd=1e9;
-  for(const p of G.players){if(p.off||p.wall||p.kickCd>0||p.stun>0)continue;const gk=p.role==="GK",reach=gk?(p.dive||p.gkJump>0?46:34):27;if(b.z>reach)continue;const r=gk?(p.dive?27:17):13,d=Math.hypot(p.x-b.x,p.y-b.y);if(d<r&&d<bd){bd=d;best=p}}
+  for(const p of G.players){if(p.off||p.wall||p.kickCd>0||p.stun>0)continue;const gk=p.role==="GK",reach=gk?(p.dive||p.gkJump>0?46:34):27;if(b.z>reach)continue;const r=gk?(p.dive?25:17):13,d=Math.hypot(p.x-b.x,p.y-b.y);if(d<r&&d<bd){bd=d;best=p}}
+  const d_gk=best?Math.hypot(best.x-b.x,best.y-b.y):0;
   if(!best)return;
   if(best.role!=="GK"&&b.z>7){best.kickCd=.18;b.vx*=.5;b.vy*=.5;b.vz=Math.min(b.vz,0)*.3;return}      // bola aérea: amortece mas não fica presa ao pé
   const s=Math.hypot(b.vx,b.vy);
   if(best.role==="GK"){
     if(best.dive&&b.pend&&b.pend.pen&&Math.random()<.4){best.kickCd=.35;return}
     let ok=true;
-    if(s>5){const D=best.team===1?G.D:MATE;ok=Math.random()<clamp(1-(s-5)*.085+(best.dive?.1:0),.25,.94)*D.gk}
-    if(ok&&best.dive&&s>8&&Math.random()<.5){onDeflectGK(best);b.vx=-b.vx*.3;b.vy=best.dive.side*rnd(1.2,4.2);best.kickCd=.45;sfx("kick",6);burst("spark",b.x,b.y,10,["#ffffff","#cfe8ff"],3.2,.3,2.5);return}
+    const sk=gkSkill(best),close=1-Math.min(1,d_gk/(best.dive?23:17));      // proximidade da bola ao corpo do guarda-redes no contacto
+    if(s>5){ok=Math.random()<clamp((1-(s-5)*.08+(best.dive?.08:0)-(b.z>20?.1:0)-(1-close)*.18)*(.9+.1*sk),.2,.93)*Math.min(1.1,sk)}
+    /* bola muito forte, esticada ou alta: em vez de agarrar, defende para o lado/para cima (ressalto controlado) */
+    if(ok&&(s>9||close<.35||b.z>20)&&Math.random()<(best.dive?.6:.35)){onDeflectGK(best);const sg=best.dive?best.dive.side:(b.y>=best.y?1:-1);b.vx=-b.vx*.3;b.vy=sg*rnd(1.2,4.2);if(b.z>14)b.vz=Math.max(b.vz,1.4);best.kickCd=.45;sfx("kick",6);burst("spark",b.x,b.y,10,["#ffffff","#cfe8ff"],3.2,.3,2.5);return}
+    if(!ok&&s>8&&Math.random()<clamp((s-8)*.11,0,.5)){b.vx*=.6;b.vy*=.6;best.kickCd=.45;sfx("kick",4);return}      // roça na bola e amortece-a, mas não a segura: pode entrar
     if(!ok){onDeflectGK(best);b.vx=-b.vx*.45+rnd(-1.5,1.5);b.vy=b.vy*.6+rnd(-3,3);best.kickCd=.45;sfx("kick",5);burst("spark",b.x,b.y,12,["#ffffff","#cfe8ff"],3.5,.3,2.5);return}
     if(s>5){ring(b.x,b.y,"#f2b705");if(!best.dive&&!(best.gkJump>0))best.gkJump=.6}
   }else if(s>8.5){
@@ -586,22 +592,46 @@ function goalFrame(px,py){
     if(yc>GY0&&yc<GY1&&Math.abs(zc-BAR_H)<POST_R){b.x=gl+dir*1.5;b.vx=-b.vx*.55;b.vz=(zc>=BAR_H?.9:-.5)*Math.max(1,Math.abs(b.vz))*.6;b.z=zc>=BAR_H?BAR_H+POST_R+.2:BAR_H-POST_R-.2;sfx("post");if(b.pend&&b.pend.type==="shot")b.pend.hitPost=true;return}
   }
 }
+/* probabilidade de um desarme: distância, orientação do desarmador, velocidade relativa, momento (janela a meio do movimento), diferença de qualidade e fôlego */
+function tackleChance(q,o,dq,tk){
+  const sl=tk&&q.tkSlide,reach=sl?28:tk?22:17;
+  const ux=(o.x-q.x)/(dq||1),uy=(o.y-q.y)/(dq||1),al=clamp(q.fx*ux+q.fy*uy,-1,1);      // 1 = de frente para o portador
+  const rel=Math.hypot(q.vx-o.vx,q.vy-o.vy)/Math.max(1,o.sp);
+  const tm=tk?clamp(1.05-Math.abs(1-q.dash/(q.tkDur||.2)-.5)*1.1,.45,1):1;      // melhor a meio do movimento
+  let c=(sl?.74:tk?.62:.1)*(.4+.6*Math.max(0,al))*(1.12-dq/reach*.45)*tm*(1-clamp(rel-.8,0,1.2)*.22);
+  c*=clamp(q.rating/o.rating,.75,1.25)*(.9+.1*(q.stam==null?1:q.stam))*(o.dribble?.85:1);
+  return clamp(c,0,.92);
+}
 function tackles(){
   const b=G.ball,o=b.owner;if(!o||o.role==="GK")return;
+  G.tk=G.tk||{try:0,win:0,foul:0,miss:0,loose:0};
   for(const q of G.players){
     if(q.off||q.team===o.team||q.stun>0||q.role==="GK")continue;
-    const dq=dist(q,o);if(dq>(q.tackling?28:23))continue;
+    const dq=dist(q,o),tk=!!q.tackling,reach=tk?(q.tkSlide?28:22):(q===G.ctrl&&!G.auto?15:17);
+    if(dq>reach)continue;
+    const human=q===G.ctrl&&!G.auto;
     let ch;
-    if(q===G.ctrl&&!G.auto)ch=q.tackling?(dq<20?.88:.62):(dq<15&&Math.hypot(q.vx,q.vy)>.5?.035:0);
+    if(tk){                     // desarme ativo: uma só tentativa por movimento, no primeiro contacto
+      if(q.tkRoll)continue;
+      q.tkRoll=true;ch=tackleChance(q,o,dq,true);G.tk.try++;
+    }else if(human)ch=Math.hypot(q.vx,q.vy)>.5?.035*(.5+.5*Math.max(0,q.fx*(o.x-q.x)/(dq||1)+q.fy*(o.y-q.y)/(dq||1))):0;
     else if(G.tut)ch=0;
-    else{const D=q.team===1?G.D:MATE;ch=.028*D.tackle*(q.rating/o.rating);if(o===G.ctrl)ch*=.85}
+    else{const D=q.team===1?G.D:MATE;ch=.028*D.tackle*(q.rating/o.rating)*(.5+.5*Math.max(0,q.fx*(o.x-q.x)/(dq||1)+q.fy*(o.y-q.y)/(dq||1)));if(o===G.ctrl)ch*=.85}
     if(Math.random()<ch){
       const behind=(q.x-o.x)*o.fx+(q.y-o.y)*o.fy<-6;
-      if(!G.tut&&!(q.foulCd>0)&&((q.tackling&&behind)||Math.random()<(q.tackling?.18:.045))){callFoul(q,o,behind);break}
-      if(q.tackling&&!G.tut&&Math.random()<.4)G.varNote={type:"foul",team:q.team,player:q,victim:o,x:o.x,y:o.y,t:G.t};
-      onGain(q);b.owner=q;o.stun=.5;o.kickCd=.4;q.tackling=false;q.dash=0;q.kickCd=0;
+      if(!G.tut&&!(q.foulCd>0)&&((tk&&behind)||(!tk&&behind&&Math.random()<.5)||Math.random()<(tk?(q.tkSlide?.12:.06):.03))){G.tk.foul++;callFoul(q,o,behind);break}
+      if(tk&&q.tkSlide&&!G.tut&&Math.random()<.4)G.varNote={type:"foul",team:q.team,player:q,victim:o,x:o.x,y:o.y,t:G.t};
+      G.tk.win++;onGain(q);b.owner=q;o.stun=.5;o.kickCd=.4;q.tackling=false;q.dash=0;q.kickCd=0;
       if(q===G.ctrl)G.needRelease=true;
       sfx("tackle");burst("dust",o.x,o.y,12,["#cdbb8f","#8fbf6a","#e8dcc0"],2.2,.55,3);break;
+    }else if(tk){
+      /* desarme falhado: o portador mantém a bola; um carrinho a grande velocidade que lhe acerta pode soltá-la, e entradas por trás ou muito descoordenadas são falta */
+      const behind=(q.x-o.x)*o.fx+(q.y-o.y)*o.fy<-6,rel=Math.hypot(q.vx-o.vx,q.vy-o.vy)/Math.max(1,o.sp);
+      if(q.tkSlide&&!G.tut&&!(q.foulCd>0)&&(behind||Math.random()<.18)){G.tk.foul++;callFoul(q,o,behind);break}
+      if(q.tkSlide&&rel>1.4&&Math.random()<.35){
+        const ux=(o.x-q.x)/(dq||1),uy=(o.y-q.y)/(dq||1);b.owner=null;b.vx=ux*3.2+q.vx*.3;b.vy=uy*3.2+q.vy*.3;b.pend=null;o.kickCd=.35;o.stun=.2;G.tk.loose++;
+        sfx("tackle");break;
+      }
     }
   }
 }
@@ -863,10 +893,16 @@ function aiGK(p){
   const towards=sd(p.team)===0?b.vx<-1:b.vx>1;
   if(b.pend&&b.pend.type==="shot"&&b.pend.team!==p.team&&towards&&!b.owner){
     const sp0=Math.hypot(b.vx,b.vy);
-    if(sp0>3.4&&(b.kt||0)*DT>D.react*.7){const tt=(lineX-b.x)/b.vx;
-      if(tt>0&&tt<=19){let py=clamp(b.y+b.vy*tt,GY0-2,GY1+2);if(b.pend.pen){if(p.penPick==null){const r=Math.random();p.penPick=r<.3*D.gk?py:(r<.42?H/2:(Math.random()<.5?GY0+16:GY1-16))}py=p.penPick}const need=py-p.y;
-        if(Math.abs(need)>10&&Math.abs(need)<90){gkDive(p,py,tt,need);return}
-        if(tt<12&&Math.abs(need)<=10&&sp0>6.5&&!(p.gkJump>0))p.gkJump=.6}}}
+    const sk=gkSkill(p);
+    if(sp0>3.4&&(b.kt||0)*DT>D.react*(1.15-.2*sk)){const tt=(lineX-b.x)/b.vx;
+      if(tt>0&&tt<=19){
+        /* o guarda-redes lê a trajetória com erro: maior em remates fortes e de perto, e em guarda-redes menos bons; o erro fixa-se ao ler o remate */
+        if(p.gkPend!==b.pend){p.gkPend=b.pend;p.gkErr=(Math.random()+Math.random()+Math.random()-1.5)*2*(1.45-sk)*(9+sp0*1.7)*(tt<7?1.25:1)}
+        const zA=b.z+b.vz*tt-.5*GRAV*tt*tt;      // altura estimada à chegada à linha
+        if(zA>BAR_H+3)return seek(p,lineX,clamp(b.y,GY0+6,GY1-6),1);      // vai por cima da barra: não se atira
+        let py=clamp(b.y+b.vy*tt+p.gkErr,GY0-2,GY1+2);if(b.pend.pen){if(p.penPick==null){const r=Math.random();p.penPick=r<.3*D.gk?py:(r<.42?H/2:(Math.random()<.5?GY0+16:GY1-16))}py=p.penPick}const need=py-p.y;
+        if(Math.abs(need)>10&&Math.abs(need)<90){gkDive(p,py,tt,need,zA);return}
+        if(tt<12&&Math.abs(need)<=10&&(sp0>6.5||zA>16)&&!(p.gkJump>0))p.gkJump=.6}}}
   if(!b.owner&&towards&&Math.abs(b.vx)>3&&(b.kt||0)*DT>D.react){const tt=(lineX-b.x)/b.vx;if(tt>0&&tt<70)return seek(p,lineX,clamp(b.y+b.vy*tt,GY0+6,GY1-6),1.25*D.gk)}
   const o=b.owner;
   if(o&&o.team!==p.team&&nxOf(p.team,o.x)<.16&&Math.abs(o.y-H/2)<150&&dist(o,p)<130)return seek(p,o.x-dir*8,o.y,1.1*D.gk);
@@ -874,11 +910,15 @@ function aiGK(p){
   const gcx=sd(p.team)===0?X0:X1,dx=b.x-gcx,dy=b.y-H/2,d=Math.hypot(dx,dy)||1,r=18+(1-Math.min(1,d/600))*30;
   seek(p,gcx+dx/d*r,clamp(H/2+dy/d*r,GY0+8,GY1-8),1.05);
 }
-function gkDive(p,py,tt,need){const side=need>0?1:-1,v=Math.min(6.6,Math.abs(need)/Math.max(5,tt)*1.15+1);p.dive={ty:py,side,t:0,dur:.5,v};p.gkDown=1.3;p.dx=p.dy=0;p.vy=side*v*.5;p.sprint=false}
+/* qualidade do guarda-redes: dificuldade da equipa × atributo do jogador */
+function gkSkill(p){const D=p.team===1?G.D:MATE;return clamp(D.gk*(.85+.3*((p.rating||70)-60)/40),.55,1.25)}
+/* mergulho: o tempo no chão é proporcional à distância percorrida (mergulhos curtos recuperam depressa); bola alta combina salto com mergulho */
+function gkDive(p,py,tt,need,zA){const side=need>0?1:-1,v=Math.min(4.6+1.2*gkSkill(p),Math.abs(need)/Math.max(5,tt)*1.15+1);p.dive={ty:py,side,t:0,dur:.5,v};p.gkDown=.75+.55*Math.min(1,Math.abs(need)/90);p.dx=p.dy=0;p.vy=side*v*.5;p.sprint=false;if(zA>16)p.gkJump=.6}
 function gkDistribute(p){
   const st=p.team===1?STYLES[G.styleR]:STYLES.posse,long=Math.random()<st.gkLong;let best=null,bs=-1e9;
   for(const q of G.players){if(q.off||q.team!==p.team||q===p)continue;const s=Math.min(minOppDist(q),140)+(q.role==="D"?20:0)-Math.abs(q.y-p.y)*.08+(long&&q.role==="F"?70:0);if(laneClear(p,q)&&s>bs){bs=s;best=q}}
-  passTo(p,best||nearestOf(p.team,{x:W/2,y:H/2},false),.8);
+  const tgt=best||nearestOf(p.team,{x:W/2,y:H/2},false),hand=!long&&tgt&&dist(p,tgt)<230;      // curta: lançamento com a mão (mais preciso, menos força); longa: pontapé de baliza
+  passTo(p,tgt,hand?.45:.9,hand?7.2:11);
 }
 
 /* ================= Replay ================= */
