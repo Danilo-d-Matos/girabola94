@@ -206,7 +206,7 @@ function lerSnap(buf) {
   var fl = dv.getUint8(o++); s.half = fl & 1 ? 2 : 1; s.swap = !!(fl & 2); var temMsg = !!(fl & 4);
   s.t = dv.getUint16(o) / 10; o += 2;
   s.score = [dv.getUint8(o++), dv.getUint8(o++)];
-  s.bx = dv.getUint16(o) / 60; o += 2; s.by = dv.getUint16(o) / 60; o += 2;
+  s.bx = dv.getUint16(o) / 60; o += 2; s.by = dv.getUint16(o) / 60; o += 2; s.bz = dv.getUint8(o++) / 3;
   s.owner = dv.getInt8(o++); s.hot = dv.getUint8(o++);
   s.c0 = dv.getInt8(o++); s.c2 = dv.getInt8(o++);
   s.ch = [dv.getUint8(o++) / 255, dv.getUint8(o++) / 255];
@@ -274,6 +274,7 @@ function aplicar(s, rt) {
   // bola
   var bx = a.bx + (c.bx - a.bx) * al, by = a.by + (c.by - a.by) * al, B = G.ball;
   var P2 = mxy(bx, by); B.x = P2[0]; B.y = P2[1];
+  B.z = (a.bz || 0) + ((c.bz || 0) - (a.bz || 0)) * al; B.vz = 0; B.sp = 0;
   var ow = c.owner >= 0 ? G.players[idx(c.owner, n)] : null; B.owner = ow;
   if (ow && c.owner === mi && !ST.semPrev) { B.x = ow.x + ow.fx * 11; B.y = ow.y + ow.fy * 11; }
   B.vx = 0; B.vy = 0;
