@@ -1,0 +1,74 @@
+/* ===== Girabola 94 — identidade tipográfica =====
+   Duas famílias, com funções distintas e carregadas localmente (@fontsource, empacotadas pelo Vite):
+   · Rajdhani  — títulos, botões, rótulos e todos os números (marcador, cronómetro, estatísticas); 500/600/700, algarismos tabulares
+   · Inter     — texto corrente e interface; 400/500/600/700
+   Cores: branco para ler, azul #1077AD para estados interactivos, dourado só em destaques. */
+html:root{
+  --f-titulo:"Rajdhani","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
+  --f-ui:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-display:var(--f-titulo);--f-num:var(--f-titulo);--f-body:var(--f-ui);
+  --g94-titulo:var(--f-titulo);--g94-texto:var(--f-ui);
+  --tx-azul:#1077AD;--tx-ouro:#FFC629;--tx-branco:#F5F7FA;--tx-suave:#B4C4D3;
+  --tx-sombra:0 2px 8px rgba(0,0,0,.45);
+  --tx-brilho:0 0 22px rgba(16,119,173,.30);
+  --tx-entrada:.26s cubic-bezier(.2,.7,.2,1);
+}
+html body{font-family:var(--f-ui);font-weight:400;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-synthesis:none}
+button,input,select,textarea{font-family:inherit}
+
+/* ---- títulos: presença, sombra subtil e entrada curta ---- */
+html body :is(h1,h2,h3,.title,.brand-home,.panel-title,.eyebrow,.bigscore,.team b,.board,.pw-card b,.roster-player strong,.hub-head b,.stat b){font-family:var(--f-titulo);font-style:normal;font-weight:700;letter-spacing:.03em}
+html body :is(h1,h2){font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1.05;text-shadow:var(--tx-sombra),var(--tx-brilho)}
+html body h3{font-weight:700;letter-spacing:.04em;text-shadow:var(--tx-sombra)}
+html body :is(.eyebrow,.panel-title){font-weight:700;text-transform:uppercase;letter-spacing:.14em;text-shadow:none}
+html body .eyebrow{color:var(--tx-ouro)}
+.hl{color:var(--tx-ouro)}                                   /* palavra ou número a realçar dentro de um título */
+@keyframes g94-entrada{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#app .screen :is(h1,h2,.eyebrow){animation:g94-entrada var(--tx-entrada) both}
+#app .screen h2{animation-delay:.03s}
+#app .c94-root :is(h1,h2,.eyebrow),#app .match :is(h1,h2){animation:none}
+
+/* ---- botões e opções: o texto responde, sem mexer no tamanho nem na posição ---- */
+html body :is(.btn,.c94-btn,.g94-tab,.pw-step,.fx-tab,.seg button,.c94-abas button,.c94-chips button,.c94-lado button){font-family:var(--f-titulo);font-weight:700;letter-spacing:.05em}
+html body :is(.btn,.g94-tab,.c94-btn,.pw-card b,.g94-card h3,.team b,.c94-abas button,.fx-tab,.seg button){transition:color .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease,filter .16s ease,text-shadow .16s ease,transform .16s ease}
+html body :is(.g94-card,.pw-card,.team,.c94-pl,.c94-estilo,.c94-formas button):is(:hover,:focus-visible) :is(h3,b){color:#fff;text-shadow:0 0 14px rgba(16,119,173,.55)}
+html body :is(.btn,.c94-btn,.g94-tab,.c94-abas button,.seg button):is(:focus-visible,:active){text-shadow:0 0 12px rgba(16,119,173,.6)}
+html body :is([aria-pressed=true],[aria-selected=true],.sel,.on){filter:brightness(1.07)}
+html body :is(.g94-card,.pw-card,.team,.c94-pl,.c94-estilo):is(:focus-visible){animation:g94-foco .22s ease-out}
+@keyframes g94-foco{from{box-shadow:0 0 0 0 rgba(16,119,173,.0)}60%{box-shadow:0 0 0 6px rgba(16,119,173,.35)}to{box-shadow:0 0 0 2px rgba(16,119,173,.6)}}
+
+/* ---- números: fortes, tabulares e alinhados ---- */
+html body :is(.board,.board *,.mstats,.mstats *,.bigscore,.stat b,.g94-st b,.clk,.sc,.c94-num,.c94-pl b,.c94-slot i,.c94-total b,.table td,table td,table th,.fx-tab i,.tu-n b){font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
+html body :is(.board .sc,.match .topbar .board .sc){font-family:var(--f-titulo);font-weight:700;letter-spacing:.02em;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+html body :is(.board .clk,.match .topbar .board .clk){font-family:var(--f-titulo);font-weight:600;letter-spacing:.04em}
+html body :is(.board .tn,.match .topbar .board .tn){font-family:var(--f-titulo);font-weight:700;letter-spacing:.05em}
+@keyframes g94-golo{0%{transform:scale(1)}30%{transform:scale(1.14);color:#fff;text-shadow:0 0 16px rgba(255,198,41,.75)}100%{transform:scale(1)}}
+.g94-bump{display:inline-block;animation:g94-golo .5s ease-out}
+
+/* ---- estatísticas e dados: valores fortes, rótulos pequenos e espaçados ---- */
+html body .mstats td:first-child,html body .mstats td:last-child{font-family:var(--f-titulo);font-weight:700;font-size:22px;color:var(--tx-ouro)}
+html body .mstats td:nth-child(2){font-family:var(--f-ui);font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx-suave)}
+html body :is(table th,.g94-st span,.c94-rot,.note,small){letter-spacing:.04em}
+html body :is(.g94-st span,.c94-total span){font-family:var(--f-ui);font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+html body :is(.stat b,.g94-st b,.bigscore){font-weight:700;color:var(--tx-ouro)}
+
+/* ---- mensagens e notificações ---- */
+html body .toast{font-family:var(--f-ui);font-weight:600;animation:g94-entrada .22s ease-out both}
+html body .toast span{letter-spacing:.01em}
+html body .notice{font-family:var(--f-ui);font-weight:500}
+
+/* ---- corpo do texto ---- */
+html body :is(p,li,label,td,.lede,.d,.note){font-family:var(--f-ui)}
+html body :is(.lede,.note,.d){font-weight:400;line-height:1.5}
+html body :is(.g94-card .k,.g94-card .s){font-family:var(--f-titulo);font-weight:600;letter-spacing:.14em}
+
+/* ---- sem animações quando o utilizador as desliga (sistema ou opção "reduzir efeitos") ---- */
+@media (prefers-reduced-motion:reduce){
+  #app .screen :is(h1,h2,.eyebrow),html body .toast,.g94-bump,html body :is(.g94-card,.pw-card,.team,.c94-pl,.c94-estilo):is(:focus-visible){animation:none!important}
+  html body :is(.btn,.g94-tab,.c94-btn,.pw-card b,.g94-card h3,.team b,.c94-abas button,.fx-tab,.seg button){transition:none!important}
+}
+html.reduce-fx #app .screen :is(h1,h2,.eyebrow),html.reduce-fx .toast,html.reduce-fx .g94-bump,html.reduce-fx :is(.g94-card,.pw-card,.team,.c94-pl,.c94-estilo):is(:focus-visible){animation:none!important}
+
+/* descrições dos cartões do pré-jogo: com Inter ocupam mais; em ecrãs altos há espaço para 3 linhas sem cortes */
+@media (min-height:800px){html body .pw-card span{-webkit-line-clamp:3}}
+html body .pw-card span{letter-spacing:-.003em}

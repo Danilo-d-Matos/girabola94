@@ -93,7 +93,7 @@ function varGfx(c){
   // rótulos
   var txt=show.type==="foul"?"CONTACTO":(show.label||"FORA DE JOGO"),pp=show.type==="foul"?show.victim:{x:show.px,y:show.py};
   var L=proj(pp.x,pp.y,0);c.save();TF(c);
-  c.font="700 "+Math.max(13,Math.min(24,L.s*10))+"px 'Barlow Condensed','Arial Narrow',sans-serif";c.textAlign="center";c.textBaseline="middle";c.lineWidth=4;c.lineJoin="round";c.strokeStyle="rgba(0,0,0,.8)";
+  c.font="700 "+Math.max(13,Math.min(24,L.s*10))+"px 'Rajdhani','Arial Narrow',sans-serif";c.textAlign="center";c.textBaseline="middle";c.lineWidth=4;c.lineJoin="round";c.strokeStyle="rgba(0,0,0,.8)";
   var ty=L.y-46*L.s;c.strokeText(txt,L.x,ty);c.fillStyle=show.type==="foul"?"#ffe13c":"#ff5a6e";c.fillText(txt,L.x,ty);
   c.restore();
 }
@@ -105,9 +105,9 @@ function varBadge(c){
   var y=((now/1400)%1)*VH;c.fillStyle="rgba(120,200,255,.07)";c.fillRect(0,y,VW,3);
   var x=14,yy=60,w=214,h=54;
   c.fillStyle="rgba(8,18,32,.92)";c.strokeStyle="#47677a";c.lineWidth=2;c.beginPath();if(c.roundRect)c.roundRect(x,yy,w,h,12);else c.rect(x,yy,w,h);c.fill();c.stroke();
-  c.font='28px Bungee,"Arial Black",sans-serif';c.fillStyle="#fff";c.textAlign="left";c.textBaseline="middle";c.fillText("VAR",x+14,yy+h/2+1);
-  if(!v.shown){c.fillStyle=(now%700<420)?"#d7263d":"#661522";c.beginPath();c.arc(x+98,yy+h/2,6,0,Math.PI*2);c.fill();c.font="700 17px 'Barlow Condensed','Arial Narrow',sans-serif";c.fillStyle="#cfe3f2";c.fillText("A VERIFICAR",x+110,yy+h/2+1)}
-  else{c.font="700 17px 'Barlow Condensed','Arial Narrow',sans-serif";c.fillStyle=v.disallow?"#ff6b7e":"#7df2a6";c.fillText(v.disallow?"ANULADO":"CONFIRMADO",x+98,yy+h/2+1)}
+  c.font='700 28px Rajdhani,"Arial Narrow",sans-serif';c.fillStyle="#fff";c.textAlign="left";c.textBaseline="middle";c.fillText("VAR",x+14,yy+h/2+1);
+  if(!v.shown){c.fillStyle=(now%700<420)?"#d7263d":"#661522";c.beginPath();c.arc(x+98,yy+h/2,6,0,Math.PI*2);c.fill();c.font="700 17px 'Rajdhani','Arial Narrow',sans-serif";c.fillStyle="#cfe3f2";c.fillText("A VERIFICAR",x+110,yy+h/2+1)}
+  else{c.font="700 17px 'Rajdhani','Arial Narrow',sans-serif";c.fillStyle=v.disallow?"#ff6b7e":"#7df2a6";c.fillText(v.disallow?"ANULADO":"CONFIRMADO",x+98,yy+h/2+1)}
   c.restore();
 }
 /* ---------- penálti, câmara de penálti e desempate da Taça ---------- */
@@ -274,7 +274,7 @@ function penCardGfx(c){
       if(!window.__sp94){c.fillStyle="rgba(8,18,32,.85)";c.fillRect(bx-3,by-3,bw+6,16);c.fillStyle="#2a3a4a";c.fillRect(bx,by,bw,10);
       c.fillStyle=G.charge>.86?"#ff4d5e":(G.charge>.55?"#f2b705":"#3ddc84");c.fillRect(bx,by,bw*G.charge,10)}
     }
-    c.font="700 22px 'Barlow Condensed','Arial Narrow',sans-serif";c.textAlign="center";c.textBaseline="middle";c.lineWidth=5;c.lineJoin="round";c.strokeStyle="rgba(0,0,0,.75)";
+    c.font="700 22px 'Rajdhani','Arial Narrow',sans-serif";c.textAlign="center";c.textBaseline="middle";c.lineWidth=5;c.lineJoin="round";c.strokeStyle="rgba(0,0,0,.75)";
     var hint=human?(pn.t<.7?"Prepara-te…":"← → para apontar · segura REMATE e larga para chutar"):(pn.team===1&&!G.auto?"← → escolhe o lado do mergulho do guarda-redes":"");
     if(hint&&!window.__sp94){c.strokeText(hint,VW/2,VH-44);c.fillStyle="#fff";c.fillText(hint,VW/2,VH-44)}
     c.restore();
@@ -285,14 +285,14 @@ function penCardGfx(c){
     var w=n*26+150,h=78,x0=VW/2-w/2,y0=58;
     TU(c);c.save();
     c.fillStyle="rgba(8,18,32,.92)";c.strokeStyle="#47677a";c.lineWidth=2;c.beginPath();if(c.roundRect)c.roundRect(x0,y0,w,h,12);else c.rect(x0,y0,w,h);c.fill();c.stroke();
-    c.textBaseline="middle";c.font="700 18px 'Barlow Condensed','Arial Narrow',sans-serif";
+    c.textBaseline="middle";c.font="700 18px 'Rajdhani','Arial Narrow',sans-serif";
     for(var t=0;t<2;t++){
       var yy=y0+22+t*34;c.textAlign="left";c.fillStyle=sh.kickTeam===t&&G.state!=="shootwait"?"#f6c744":"#cfe3f2";c.fillText(G.teams[t].s,x0+14,yy);
       for(var i=0;i<n;i++){var cx=x0+74+i*26,r=sh.res[t][i];
         if(r===1){c.fillStyle="#3ddc84";c.beginPath();c.arc(cx,yy,8,0,Math.PI*2);c.fill()}
         else if(r===0){c.strokeStyle="#ff6b7e";c.lineWidth=3;c.beginPath();c.moveTo(cx-6,yy-6);c.lineTo(cx+6,yy+6);c.moveTo(cx+6,yy-6);c.lineTo(cx-6,yy+6);c.stroke()}
         else{c.strokeStyle="#6d8aa0";c.lineWidth=2;c.beginPath();c.arc(cx,yy,7,0,Math.PI*2);c.stroke()}}
-      c.textAlign="right";c.fillStyle="#fff";c.font="700 24px 'Barlow Condensed','Arial Narrow',sans-serif";c.fillText(String(sh.score[t]),x0+w-14,yy);c.font="700 18px 'Barlow Condensed','Arial Narrow',sans-serif"}
+      c.textAlign="right";c.fillStyle="#fff";c.font="700 24px 'Rajdhani','Arial Narrow',sans-serif";c.fillText(String(sh.score[t]),x0+w-14,yy);c.font="700 18px 'Rajdhani','Arial Narrow',sans-serif"}
     c.restore();
   }
   // cartão mostrado pelo árbitro
@@ -311,8 +311,8 @@ function penCardGfx(c){
     var bx2=14,by2=G.state==="var"?126:60,bw2=272,bh2=58;
     c.fillStyle="rgba(8,18,32,.92)";c.strokeStyle="#47677a";c.lineWidth=2;c.beginPath();if(c.roundRect)c.roundRect(bx2,by2,bw2,bh2,12);else c.rect(bx2,by2,bw2,bh2);c.fill();c.stroke();
     c.fillStyle=col;c.strokeStyle="#111";c.lineWidth=1.5;c.save();c.translate(bx2+30,by2+bh2/2);c.rotate(-.12);c.beginPath();c.rect(-11,-17,22,34);c.fill();c.stroke();c.restore();
-    c.textAlign="left";c.textBaseline="middle";c.fillStyle="#fff";c.font="700 22px 'Barlow Condensed','Arial Narrow',sans-serif";c.fillText((cs.num?cs.num+" · ":"")+cs.name,bx2+56,by2+20);
-    c.fillStyle=cs.color==="red"?"#ff7b86":"#ffe98a";c.font="700 17px 'Barlow Condensed','Arial Narrow',sans-serif";c.fillText(cs.text.toUpperCase(),bx2+56,by2+42);
+    c.textAlign="left";c.textBaseline="middle";c.fillStyle="#fff";c.font="700 22px 'Rajdhani','Arial Narrow',sans-serif";c.fillText((cs.num?cs.num+" · ":"")+cs.name,bx2+56,by2+20);
+    c.fillStyle=cs.color==="red"?"#ff7b86":"#ffe98a";c.font="700 17px 'Rajdhani','Arial Narrow',sans-serif";c.fillText(cs.text.toUpperCase(),bx2+56,by2+42);
     c.restore();
   }
 }

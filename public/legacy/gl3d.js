@@ -144,8 +144,8 @@ function shirtCanvas(look){
   const baseCol=(k.pattern===2||k.pattern===1||look.ref)?(look.ref?"#16181b":k.shirt):k.shirt;
   c.fillStyle=lum(baseCol)>150?"#111":"#fff";if(k.pattern===2||k.pattern===1){c.fillStyle=lum(k.accent)>150&&k.pattern===2?"#111":(lum(k.shirt)>150?"#111":"#fff")}
   c.textAlign="center";c.textBaseline="middle";
-  if(look.name){c.font="700 15px 'Barlow Condensed','Arial Narrow',sans-serif";c.fillText(String(look.name).toUpperCase().slice(0,12),256,30)}
-  if(look.num!==""&&look.num!=null){c.font="800 62px 'Barlow Condensed','Arial Narrow',sans-serif";c.fillText(String(look.num),256,76)}
+  if(look.name){c.font="700 15px 'Rajdhani','Arial Narrow',sans-serif";c.fillText(String(look.name).toUpperCase().slice(0,12),256,30)}
+  if(look.num!==""&&look.num!=null){c.font="800 62px 'Rajdhani','Arial Narrow',sans-serif";c.fillText(String(look.num),256,76)}
   return cv;
 }
 function crestCanvas(look){
@@ -312,7 +312,7 @@ function gstScreens(S,g){
   S.ecra=null;
   if(g.papeis.publicidade){
     const cv=mkCanvas(2048,128),c=cv.getContext("2d"),ads=[["GIRABOLA 94","#151515","#f2b705"],[G.stadium.toUpperCase(),"#0f2c5c","#ffffff"],["BOLA NO PÉ","#c8102e","#ffffff"],["FUTEBOL ANGOLANO","#1f8a4c","#ffffff"],["JOGO LIMPO","#f2b705","#151515"]],w=2048/ads.length;
-    c.textAlign="center";c.textBaseline="middle";c.font="700 64px 'Barlow Condensed',Arial Narrow,sans-serif";
+    c.textAlign="center";c.textBaseline="middle";c.font="700 64px 'Rajdhani',Arial Narrow,sans-serif";
     ads.forEach((a,i)=>{c.fillStyle=a[1];c.fillRect(i*w,0,w,128);c.fillStyle=a[2];c.fillText(a[0],i*w+w/2,68)});
     gstTex(g,"publicidade",new T.CanvasTexture(cv));
   }
@@ -324,11 +324,11 @@ function gstDrawScreen(S){
   const c=e.cv.getContext("2d"),W2=1024,H2=448,gr=c.createLinearGradient(0,0,0,H2);gr.addColorStop(0,"#0b1f3d");gr.addColorStop(1,"#050d1c");
   c.fillStyle=gr;c.fillRect(0,0,W2,H2);c.fillStyle="#f2b705";c.fillRect(0,0,W2,14);c.fillRect(0,H2-14,W2,14);
   c.textAlign="center";c.textBaseline="middle";c.fillStyle="#ffffff";
-  c.font="700 54px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillText("GIRABOLA 94",W2/2,62);
-  c.font="800 150px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillText(G.score[0]+" - "+G.score[1],W2/2,215);
-  c.font="700 72px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillStyle="#f2b705";c.fillText(G.teams[0].s,W2*.2,215);c.fillText(G.teams[1].s,W2*.8,215);
-  c.fillStyle="#ffffff";c.font="700 64px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillText(minute()+"'",W2/2,335);
-  c.font="600 34px 'Barlow Condensed',Arial Narrow,sans-serif";c.fillStyle="#9fb6d4";c.fillText(G.stadium,W2/2,396);
+  c.font="700 54px 'Rajdhani',Arial Narrow,sans-serif";c.fillText("GIRABOLA 94",W2/2,62);
+  c.font="800 150px 'Rajdhani',Arial Narrow,sans-serif";c.fillText(G.score[0]+" - "+G.score[1],W2/2,215);
+  c.font="700 72px 'Rajdhani',Arial Narrow,sans-serif";c.fillStyle="#f2b705";c.fillText(G.teams[0].s,W2*.2,215);c.fillText(G.teams[1].s,W2*.8,215);
+  c.fillStyle="#ffffff";c.font="700 64px 'Rajdhani',Arial Narrow,sans-serif";c.fillText(minute()+"'",W2/2,335);
+  c.font="600 34px 'Rajdhani',Arial Narrow,sans-serif";c.fillStyle="#9fb6d4";c.fillText(G.stadium,W2/2,396);
   e.tex.needsUpdate=true;
 }
 /* linhas do jogo por cima do relvado do cenário (as marcações seguem as regras do jogo) */
@@ -1107,7 +1107,7 @@ function overlay(c,V,sh){
   if(!V.replay){
     const named=[];if(V.ctrl&&!V.ctrl.off)named.push([V.ctrl,24]);const ow=G.ball.owner;if(ow&&ow!==V.ctrl&&!ow.off)named.push([ow,14]);
     for(const [p,dy] of named){const gp=G.players.find(q=>q.i===p.i&&q.team===p.team)||p,P=proj(p.x,p.y,0),fs=Math.max(11,Math.min(18,P.s*7.4)),txt=String(gp.name||"");
-      c.font="700 "+fs+"px 'Barlow Condensed','Arial Narrow',sans-serif";c.textAlign="center";c.textBaseline="middle";c.lineWidth=3.2;c.lineJoin="round";c.strokeStyle="rgba(0,0,0,.78)";
+      c.font="700 "+fs+"px 'Rajdhani','Arial Narrow',sans-serif";c.textAlign="center";c.textBaseline="middle";c.lineWidth=3.2;c.lineJoin="round";c.strokeStyle="rgba(0,0,0,.78)";
       const y=P.y+dy;c.strokeText(txt,P.x,y);c.fillStyle=p===V.ctrl?"#ffffff":(gp.team===0?"#ffe08a":"#ff9aa6");c.fillText(txt,P.x,y)}
     if(G.refCard&&G.ref&&G.t<G.refCard.until){const P=proj(G.ref.x,G.ref.y,0),k=P.s*.95;c.fillStyle=G.refCard.color;c.fillRect(P.x+8*k,P.y-40*k,6*k,9*k)}
   }
@@ -1123,7 +1123,7 @@ function overlay(c,V,sh){
   TU(c);
   if(!PCAM())drawRadar(c,V);
   if(G.flash>0&&!PREF.reduceFx){c.fillStyle=`rgba(255,255,255,${G.flash*.5})`;c.fillRect(0,0,VW,VH)}
-  if(V.replay){c.fillStyle="rgba(0,0,0,.55)";c.fillRect(0,0,VW,26);c.fillRect(0,VH-26,VW,26);c.font='22px Bungee,"Arial Black",sans-serif';c.textAlign="left";c.textBaseline="middle";c.fillStyle=FRAME%60<40?"#d7263d":"#7a1220";c.beginPath();c.arc(30,13,6,0,Math.PI*2);c.fill();c.fillStyle="#fff";c.fillText("REPLAY",44,14)}
+  if(V.replay){c.fillStyle="rgba(0,0,0,.55)";c.fillRect(0,0,VW,26);c.fillRect(0,VH-26,VW,26);c.font='700 22px Rajdhani,"Arial Narrow",sans-serif';c.textAlign="left";c.textBaseline="middle";c.fillStyle=FRAME%60<40?"#d7263d":"#7a1220";c.beginPath();c.arc(30,13,6,0,Math.PI*2);c.fill();c.fillStyle="#fff";c.fillText("REPLAY",44,14)}
   drawMsg(c);
 }
 

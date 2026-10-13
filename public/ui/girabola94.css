@@ -4,7 +4,7 @@
   --g94-ouro:#FFC629;--g94-ouro2:#E5A91A;--g94-branco:#F5F7FA;--g94-texto2:#AFC2D4;
   --g94-linha:#0066CC66;--g94-linha-forte:#00A8FF99;
   --g94-raio:12px;--g94-raio-s:8px;--g94-esp:14px;--g94-sombra:0 6px 22px #0008;
-  --g94-titulo:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;--g94-texto:system-ui,'Segoe UI',sans-serif;
+  --g94-titulo:'Rajdhani','Arial Narrow',system-ui,sans-serif;--g94-texto:system-ui,'Segoe UI',sans-serif;
   --g94-transicao:.14s ease;
 }
 .g94{display:flex;flex-direction:column;gap:var(--g94-esp);width:min(1480px,100%);margin:0 auto;font-family:var(--g94-texto);color:var(--g94-branco)}

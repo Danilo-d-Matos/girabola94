@@ -10,7 +10,7 @@ function painel(c, x, y, w, h) {
   c.save(); c.fillStyle = "rgba(6,22,38,.74)"; c.strokeStyle = "rgba(0,102,204,.55)"; c.lineWidth = 1.5;
   rr(c, x, y, w, h, 10); c.fill(); c.stroke(); c.restore();
 }
-var FONT_T = "700 17px 'Barlow Condensed','Arial Narrow',sans-serif", FONT_S = "600 15px system-ui,sans-serif";
+var FONT_T = "700 17px 'Rajdhani','Arial Narrow',sans-serif", FONT_S = "600 15px system-ui,sans-serif";
 
 /* o que mostrar para a bola parada em curso (só para quem a vai marcar: equipa 0 com controlo humano) */
 function contexto() {
@@ -42,7 +42,7 @@ function desenhar(c) {
   var tb = document.querySelector(".topbar"), y0 = ((tb ? tb.offsetHeight : 44) + 8) / SC;
   painel(c, 16, y0, w1, 46);
   c.textBaseline = "alphabetic"; c.textAlign = "left"; c.fillStyle = "#AFC2D4"; c.font = "600 11px system-ui"; c.fillText(t1, 30, y0 + 17);
-  c.fillStyle = "#F5F7FA"; c.font = "700 19px 'Barlow Condensed','Arial Narrow',sans-serif"; c.fillText(x.banner, 30, y0 + 37);
+  c.fillStyle = "#F5F7FA"; c.font = "700 19px 'Rajdhani','Arial Narrow',sans-serif"; c.fillText(x.banner, 30, y0 + 37);
   if (x.titulo) {
     var n = x.linhas.length, h = 40 + n * 26, py = VH - h - 16;
     painel(c, 16, py, 270, h);
@@ -54,7 +54,7 @@ function desenhar(c) {
     var ch = Math.max(0, Math.min(1, G.charge || 0)), bw = Math.min(420, VW * .42, VW - 16 - 270 - 36 - 40), bx = Math.max(VW / 2 - bw / 2, 16 + 270 + 36), by = VH - 78;
     painel(c, bx - 14, by - 30, bw + 28, 62);
     c.fillStyle = "#F5F7FA"; c.font = "600 12px system-ui"; c.textAlign = "left"; c.fillText("POTÊNCIA DO REMATE", bx, by - 10);
-    c.textAlign = "right"; c.fillStyle = OURO; c.font = "700 20px 'Barlow Condensed','Arial Narrow',sans-serif"; c.fillText(Math.round(ch * 100) + "%", bx + bw, by - 8);
+    c.textAlign = "right"; c.fillStyle = OURO; c.font = "700 20px 'Rajdhani','Arial Narrow',sans-serif"; c.fillText(Math.round(ch * 100) + "%", bx + bw, by - 8);
     c.fillStyle = "rgba(255,255,255,.14)"; rr(c, bx, by, bw, 14, 7); c.fill();
     if (ch > 0) { var gr = c.createLinearGradient(bx, 0, bx + bw, 0); gr.addColorStop(0, AZUL); gr.addColorStop(.6, ELET); gr.addColorStop(1, OURO); c.fillStyle = gr; rr(c, bx, by, Math.max(10, bw * ch), 14, 7); c.fill(); }
   }
