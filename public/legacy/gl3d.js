@@ -7,7 +7,7 @@
 if(typeof THREE==="undefined"){console.warn("Three.js indisponível: a usar o desenho em canvas 2D");return}
 const T=THREE;
 /* escala real: o jogador mede 27 unidades para 1,80 m (15 u/m), por isso uma bola de 22 cm de diâmetro (raio 0,11 m) tem raio 1,65 */
-const BALL_R=0.11*(27/1.8);
+const BALL_R=2.4;   // a bola real teria 1,65; aumentada de propósito para se ver bem na câmara de TV
 let R=null;
 
 /* ---------- utilitários ---------- */
@@ -492,10 +492,11 @@ function glbTeamTex(id){
   return GLBM.tex[id]=t;
 }
 function glbMatSet(look){
-  const code=look.code||"",id=GLBM.TEAM[code]||"petro_luanda",key=look.ref?"ref":look.gk?"gk|"+code+"|"+look.gkShirt:id;
+  const code=look.code||"",id=GLBM.TEAM[code]||"petro_luanda",cu=look.kit&&look.kit.custom&&!look.ref&&!look.gk,key=look.ref?"ref":look.gk?"gk|"+code+"|"+look.gkShirt:cu?"cus|"+id+"|"+look.kit.shirt+look.kit.shorts+look.kit.socks:id;
   if(GLBM.mats[key])return GLBM.mats[key];
   const tex=glbTeamTex(id),mk=(o)=>new T.MeshLambertMaterial(Object.assign({emissive:0x1a1a1a},o)),set={};
   for(const part of ["Cabeca","Bracos","Camisola","Calcoes","Pernas","Meias","Chuteiras"])set[part]=mk({map:tex});
+  if(look.kit&&look.kit.custom&&!look.ref&&!look.gk){const kk=look.kit;set.Camisola=mk({color:new T.Color(kk.shirt)});set.Calcoes=mk({color:new T.Color(kk.shorts)});set.Meias=mk({color:new T.Color(kk.socks)})}
   if(look.ref){for(const p of ["Camisola","Calcoes","Meias"])set[p]=mk({color:0x16181b});set.Meias.color.set(0x111111)}
   else if(look.gk){set.Camisola=mk({color:new T.Color(look.gkShirt||"#22c3b5")});set.Calcoes=mk({color:0x1d1d1d});set.Meias=mk({color:0x1d1d1d})}
   if(!tex.userData.ready){tex.userData.mats=tex.userData.mats||[];for(const k in set){set[k].visible=false;tex.userData.mats.push(set[k])}}

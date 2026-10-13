@@ -46,13 +46,13 @@ function montar() {
   if (!sec || sec.querySelector(".g94")) return;
   var temCont = !!document.getElementById("mCont"), temOnline = !!document.getElementById("mOnline");
   var contTxt = ""; var mc = document.getElementById("mCont"); if (mc) contTxt = (mc.textContent || "").replace(/\s+/g, " ").trim();
-  var nv = nivelInfo();
+  var nv = nivelInfo(), conta = !!(window.G94 && window.G94.sessao && window.G94.sessao());
   var carTxt = "Nível " + nv.l;
 
   var tabs = [
     ["inicio", "Início", null, true],
     ["jogador", "Meu Jogador", "mCar"],
-    ["clube", "Clube", temCont ? "mCont" : null],
+    ["clube", "Clube", "@clube"],
     ["temporada", "Temporada", temCont ? "mCont" : "mNew"],
     ["online", "Jogo Online", "mOnline"],
     ["config", "Configurações", "mOpt"]
@@ -73,7 +73,7 @@ function montar() {
       var dis = !t[3] && !t[2];
       return '<button type="button" role="tab" class="g94-tab" data-go="' + (t[2] || "") + '" aria-selected="' + (!!t[3]) + '"' + (dis ? ' aria-disabled="true" title="Disponível quando tiveres uma época em curso"' : '') + '>' + I[t[0]] + '<span>' + t[1] + '</span></button>';
     }).join("") + '</nav>' +
-    '<div class="g94-prof"><div class="g94-avatar">' + perfilNome().charAt(0).toUpperCase() + '</div><div class="g94-nome"><b>' + perfilNome().replace(/[<>&]/g, "") + '</b><small>Nível ' + nv.l + '</small><div class="g94-xp"><i style="width:' + Math.round(nv.f * 100) + '%"></i></div></div>' +
+    '<div class="g94-prof"><div class="g94-avatar" data-go="@conta" role="button" tabindex="0" title="Conta e progresso">' + perfilNome().charAt(0).toUpperCase() + '</div><div class="g94-nome" data-go="@conta" role="button" tabindex="0" title="Conta e progresso"><b>' + perfilNome().replace(/[<>&]/g, "") + '</b><small>Nível ' + nv.l + ' · ' + (conta ? "Conta ligada" : "Convidado · entrar") + '</small><div class="g94-xp"><i style="width:' + Math.round(nv.f * 100) + '%"></i></div></div>' +
     '<button type="button" class="g94-ic" id="g94Sino" aria-label="Notificações">' + I.sino + '</button><button type="button" class="g94-ic" data-go="mOpt" aria-label="Configurações">' + I.config + '</button></div></header>' +
     (temCont ? '<button type="button" class="g94-cont" data-go="mCont"><b>Continuar época</b>' + contTxt.replace(/^Continuar época\s*/i, "").replace(/[<>&]/g, "") + '<span>›</span></button>' : '') +
     '<main class="g94-grid" role="menu">' + cards.map(function (c) {
@@ -93,6 +93,8 @@ function montar() {
     var b = e.target.closest("[data-go]"); if (!b || b.getAttribute("aria-disabled") === "true") return;
     var id = b.getAttribute("data-go"); if (!id) return;
     try { sfx("ui"); } catch (x) {}
+    if (id === "@clube") { if (window.G94 && window.G94.showClube) window.G94.showClube(); return; }
+    if (id === "@conta") { if (window.G94 && window.G94.showConta) window.G94.showConta(); return; }
     acionar(id);
   });
   var sino = g.querySelector("#g94Sino");

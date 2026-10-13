@@ -38,6 +38,8 @@ const scripts = [
   "legacy/tutorial-ui.js",
   "legacy/online.js",
   "legacy/setpieces94.js",
+  "legacy/progress94.js",
+  "legacy/clube94.js",
   "legacy/menu94.js"
 ];
 for (const src of scripts) {
