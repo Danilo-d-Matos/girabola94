@@ -542,6 +542,7 @@ function glbLook(h,look){
   for(const k in m){if(set[k])m[k].material=set[k]}
   glbNumber(h,look);
 }
+window.__glb={load:glbLoad,look:glbLook};
 const GL_LOOP=new Set(["Idle_Respirar","Idle_Atento","Andar","Correr","Sprint","Correr_Tras","Passo_Lateral","Conducao_Bola"]);
 function glAct(h,name){
   const g=h.gl;if(g.act[name])return g.act[name];
