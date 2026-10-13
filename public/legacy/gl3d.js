@@ -975,7 +975,7 @@ function buildScene(){
   scene.add(sun);scene.add(sun.target);
   const shadowPlane=new T.Mesh(new T.PlaneGeometry(PW(),PH_()),new T.ShadowMaterial({opacity:.34}));shadowPlane.rotation.x=-Math.PI/2;shadowPlane.position.set(PX0()+PW()/2,.5,PY0()+PH_()/2);shadowPlane.receiveShadow=true;shadowPlane.renderOrder=.45;scene.add(shadowPlane);
   // jogadores 3D: 12 + árbitro
-  const humans=[];for(let i=0;i<13;i++){const hm=makeHuman();hm.root.visible=false;scene.add(hm.root);humans.push(hm)}
+  const humans=[];for(let i=0;i<15;i++){const hm=makeHuman();hm.root.visible=false;scene.add(hm.root);humans.push(hm)}
   R.S={scene,cam,pitch,stand,crowdTex,wave,wt,goals,ctrlRing,tutRing,tutFill,passRing,passSpin,ballSp,ballTex:bt,ballCv:bc,ballSkin:"",hot,ballShadow,trail,humans,sun,glowTex,proc:scene.children.slice(_st0,_st1)};
   R.matchG=G;
   gstApply(R.S);
@@ -1079,6 +1079,10 @@ function drawGL(c,V){
   if(R.refActive&&!V.replay&&!G.tut&&G.ref){const r=G.ref;if(r.vx==null){r.vx=r.vy=0;r.run=0;r.fx=1;r.fy=0}
     if(rh.key!=="ref"){rh.key="ref";setLook(rh,{kit:{shirt:"#16181b",accent:"#16181b",shorts:"#16181b",socks:"#16181b",sleeve:"#16181b",trim:"#e8c61b",pattern:0},code:"",gk:false,ref:true,skin:SKIN[2],hairStyle:2,hairCol:HAIR[0],beard:false,name:"",num:""})}
     rh.root.visible=true;poseHuman(rh,{x:r.x,y:r.y,fx:r.fx||1,fy:r.fy||0,spd:Math.hypot(r.vx||0,r.vy||0),sprint:false,run:r.run||0,kick:0,slide:false,down:false,gk:false},dtp,tsec)}else rh.root.visible=false;
+  // assistentes 3D (um por linha lateral)
+  for(let i=0;i<2;i++){const ah=S.humans[13+i];if(glbReady()&&!ah.gl)attachGlb(ah);const A=G.asst&&G.asst[i];
+    if(R.refActive&&!V.replay&&!G.tut&&A){if(ah.key!=="asst"){ah.key="asst";setLook(ah,{kit:{shirt:"#e8c61b",accent:"#e8c61b",shorts:"#16181b",socks:"#16181b",sleeve:"#e8c61b",trim:"#16181b",pattern:0},code:"",gk:false,ref:true,skin:SKIN[i+1],hairStyle:1,hairCol:HAIR[1],beard:false,name:"",num:""})}
+      A.run=(A.run||0)+Math.abs(A.vx||0)*.28;ah.root.visible=true;poseHuman(ah,{x:A.x,y:A.y,fx:(A.vx||0)>.05?1:((A.vx||0)<-.05?-1:0),fy:(A.vx||0)===0?(i===0?1:-1):0,spd:Math.abs(A.vx||0),sprint:false,run:A.run,kick:0,slide:false,down:false,gk:false},dtp,tsec)}else ah.root.visible=false}
   // luz que acompanha a câmara
   S.sun.target.position.set(camX,0,camY);S.sun.position.set(camX-280,560,camY+320);
   if(S.crowd)gstCrowdTick(S,dtp);

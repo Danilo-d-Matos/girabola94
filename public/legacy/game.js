@@ -345,7 +345,22 @@ function movePlayers(){
     }
     if(p.stun>0){p.vx*=.85;p.vy*=.85}
     p.run+=Math.hypot(p.vx,p.vy)*.28;
-    p.x=clamp(p.x+p.vx,X0+6,X1-6);p.y=clamp(p.y+p.vy,Y0+6,Y1-6);
+    /* junto às linhas: desacelera ao aproximar-se; pode passar a linha por inércia (até 10 u) e é travado fora dela; o portador não conduz a bola para fora */
+    if(G.state==="play"&&p.role!=="GK"&&!G.tut){
+      const ownr=G.ball.owner===p,inGoal=Math.abs(p.y-H/2)<GH/2+4;
+      const fx=(pos,v,lo,hi,own)=>{      // v<0 aproxima-se de lo; v>0 de hi
+        const dd=v<0?pos-lo:hi-pos;
+        if(dd<0)return .78;
+        if(own&&dd<36)return 1-(1-clamp((dd-16)/20,0,1))*.45;
+        return dd<14?.9+.1*dd/14:1};
+      if(p.vx!==0)p.vx*=fx(p.x,p.vx,X0,X1,ownr&&!inGoal);
+      if(p.vy!==0)p.vy*=fx(p.y,p.vy,Y0,Y1,ownr);
+    }
+    if(G.state==="play"&&p.role!=="GK"&&!G.tut&&G.ball.owner===p){      // o portador fica sempre ≥ 15 u dentro das linhas (fora da baliza)
+      const inGoal=Math.abs(p.y-H/2)<GH/2+4;
+      p.x=inGoal?clamp(p.x+p.vx,X0-10,X1+10):clamp(p.x+p.vx,X0+15,X1-15);p.y=clamp(p.y+p.vy,Y0+15,Y1-15);
+    }else if(G.state==="play"&&p.role!=="GK"&&!G.tut){p.x=clamp(p.x+p.vx,X0-10,X1+10);p.y=clamp(p.y+p.vy,Y0-10,Y1+10)}
+    else{p.x=clamp(p.x+p.vx,X0+6,X1-6);p.y=clamp(p.y+p.vy,Y0+6,Y1-6)}
     const s=Math.hypot(p.vx,p.vy);
     if(p===G.ctrl&&!G.auto)turnHeading(p,p.wx,p.wy);
     else if(s>.35&&!(p.role==="GK"&&G.ball.owner===p)&&p.dash<=0)turnHeading(p,p.vx/s,p.vy/s);
@@ -607,28 +622,33 @@ function tackles(){
   G.tk=G.tk||{try:0,win:0,foul:0,miss:0,loose:0};
   for(const q of G.players){
     if(q.off||q.team===o.team||q.stun>0||q.role==="GK")continue;
-    const dq=dist(q,o),tk=!!q.tackling,reach=tk?(q.tkSlide?28:22):(q===G.ctrl&&!G.auto?15:17);
+    const human0=q===G.ctrl&&!G.auto,dq=dist(q,o),tk=!!q.tackling,reach=tk?(q.tkSlide?28:22):(human0?15:22);
     if(dq>reach)continue;
     const human=q===G.ctrl&&!G.auto;
+    const ux=(o.x-q.x)/(dq||1),uy=(o.y-q.y)/(dq||1),al=clamp(q.fx*ux+q.fy*uy,-1,1),rel=Math.hypot(q.vx-o.vx,q.vy-o.vy)/Math.max(1,o.sp),behind=(q.x-o.x)*o.fx+(q.y-o.y)*o.fy<-6;
+    const cs=(q.vx-o.vx)*ux+(q.vy-o.vy)*uy;      // velocidade de aproximação ao portador
+    const info={slide:tk&&!!q.tkSlide,rel,behind,al};
+    /* choque violento sem tentativa de jogar a bola (carga por trás ou de lado a grande velocidade) é falta */
+    if(!tk&&!G.tut&&G.state==="play"&&!(q.foulCd>0)&&cs>2.7&&(behind||al<.4)){G.tk.foul++;callFoul(q,o,false,info);break}
     let ch;
     if(tk){                     // desarme ativo: uma só tentativa por movimento, no primeiro contacto
       if(q.tkRoll)continue;
       q.tkRoll=true;ch=tackleChance(q,o,dq,true);G.tk.try++;
     }else if(human)ch=Math.hypot(q.vx,q.vy)>.5?.035*(.5+.5*Math.max(0,q.fx*(o.x-q.x)/(dq||1)+q.fy*(o.y-q.y)/(dq||1))):0;
     else if(G.tut)ch=0;
-    else{const D=q.team===1?G.D:MATE;ch=.028*D.tackle*(q.rating/o.rating)*(.5+.5*Math.max(0,q.fx*(o.x-q.x)/(dq||1)+q.fy*(o.y-q.y)/(dq||1)));if(o===G.ctrl)ch*=.85}
+    else{const D=q.team===1?G.D:MATE;ch=.028*D.tackle*(q.rating/o.rating)*(.6+.4*Math.max(0,q.fx*(o.x-q.x)/(dq||1)+q.fy*(o.y-q.y)/(dq||1)));if(o===G.ctrl)ch*=.85}
     if(Math.random()<ch){
-      const behind=(q.x-o.x)*o.fx+(q.y-o.y)*o.fy<-6;
-      if(!G.tut&&!(q.foulCd>0)&&((tk&&behind)||(!tk&&behind&&Math.random()<.5)||Math.random()<(tk?(q.tkSlide?.12:.06):.03))){G.tk.foul++;callFoul(q,o,behind);break}
-      if(tk&&q.tkSlide&&!G.tut&&Math.random()<.4)G.varNote={type:"foul",team:q.team,player:q,victim:o,x:o.x,y:o.y,t:G.t};
+      /* ganhou a bola, mas é falta se entrou por trás ou com um carrinho descoordenado (de lado ou a grande velocidade) */
+      const reck=info.slide&&(al<.3||rel>1.6);
+      if(!G.tut&&!(q.foulCd>0)&&((behind&&(tk||cs>1))||reck)){G.tk.foul++;callFoul(q,o,info.slide&&(behind||rel>1.6),info);break}
+      if(info.slide&&!G.tut)G.varNote={type:"foul",team:q.team,player:q,victim:o,x:o.x,y:o.y,t:G.t,reck:al<.5||rel>1.2};
       G.tk.win++;onGain(q);b.owner=q;o.stun=.5;o.kickCd=.4;q.tackling=false;q.dash=0;q.kickCd=0;
       if(q===G.ctrl)G.needRelease=true;
       sfx("tackle");burst("dust",o.x,o.y,12,["#cdbb8f","#8fbf6a","#e8dcc0"],2.2,.55,3);break;
     }else if(tk){
       /* desarme falhado: o portador mantém a bola; um carrinho a grande velocidade que lhe acerta pode soltá-la, e entradas por trás ou muito descoordenadas são falta */
-      const behind=(q.x-o.x)*o.fx+(q.y-o.y)*o.fy<-6,rel=Math.hypot(q.vx-o.vx,q.vy-o.vy)/Math.max(1,o.sp);
-      if(q.tkSlide&&!G.tut&&!(q.foulCd>0)&&(behind||Math.random()<.18)){G.tk.foul++;callFoul(q,o,behind);break}
-      if(q.tkSlide&&rel>1.4&&Math.random()<.35){
+      if(info.slide&&!G.tut&&!(q.foulCd>0)&&(behind||al<.3||rel>1.6)){G.tk.foul++;callFoul(q,o,behind||rel>1.6,info);break}      // carrinho falhado com contacto
+      if(info.slide&&rel>1.1){
         const ux=(o.x-q.x)/(dq||1),uy=(o.y-q.y)/(dq||1);b.owner=null;b.vx=ux*3.2+q.vx*.3;b.vy=uy*3.2+q.vy*.3;b.pend=null;o.kickCd=.35;o.stun=.2;G.tk.loose++;
         sfx("tackle");break;
       }
@@ -2073,7 +2093,7 @@ function crowdUpdate(dt){
 }
 /* Arbitragem arcade: faltas por contacto perigoso, cartões e livres. */
 function discipline(){if(!G.laws)G.laws=[0,1].map(()=>({fouls:0,yellow:0,red:0,corners:0,offsides:0}));return G.laws}
-function callFoul(offender,victim,severe=false){
+function callFoul(offender,victim,severe=false,info){
  if(!G||G.tut||G.state!=='play'||offender.off)return false;
  const laws=discipline(),x=victim.x,y=victim.y,og=sd(offender.team)===0?X0:X1,dg=Math.abs(x-og);
  offender.dash=0;offender.tackling=false;offender.foulCd=2;victim.stun=0;laws[offender.team].fouls++;
@@ -2082,11 +2102,19 @@ function callFoul(offender,victim,severe=false){
  const covered=G.players.some(q=>!q.off&&q.team===offender.team&&q!==offender&&q.role!=="GK"&&Math.abs(q.x-og)<dg-6&&Math.abs(q.y-y)<100);
  const dogso=severe&&dg<250&&Math.abs(y-H/2)<170&&!covered;
  const canRed=offender.role!=='GK'&&field>3;
- if(canRed&&(dogso||(severe&&Math.random()<.08))){card=dogso?'Vermelho · ocasião de golo':'Vermelho direto';cc='red';offender.off=true;laws[offender.team].red++}
- else if(severe||offender.fouls>=2){offender.yellow=(offender.yellow||0)+1;laws[offender.team].yellow++;card='Amarelo';cc='yellow';
+ const brutal=!!(info&&info.slide&&info.rel>1.6&&(info.behind||info.al<.3));      // carrinho por trás/de lado a grande velocidade
+ if(canRed&&(dogso||brutal)){card=dogso?'Vermelho · ocasião de golo':'Vermelho direto';cc='red';offender.off=true;laws[offender.team].red++}
+ else if(severe||(info&&info.slide&&info.rel>1.2)||offender.fouls>=3){offender.yellow=(offender.yellow||0)+1;laws[offender.team].yellow++;card='Amarelo';cc='yellow';
   if(offender.yellow>=2&&canRed){offender.off=true;laws[offender.team].red++;card='Vermelho · segundo amarelo';cc='red'}}
  if(offender.off&&G.ctrl===offender)setCtrl(nearestOf(0,G.ball,false,offender));
  const inBox=dg<140&&Math.abs(y-H/2)<160;
+ /* lei da vantagem: a equipa lesada mantém a bola numa situação prometedora (a progredir, com espaço à frente) → o jogo segue até 2,5 s */
+ const adv=!inBox&&cc!=='red'&&!G.adv&&G.ball.owner===victim&&!victim.off&&nxOf(victim.team,victim.x)>.45&&Math.hypot(victim.vx,victim.vy)>.6*victim.sp
+   &&!G.players.some(q=>!q.off&&q.team!==victim.team&&q!==offender&&q.role!=='GK'&&Math.hypot(q.x-victim.x,q.y-victim.y)<70);
+ if(adv){G.adv={team:victim.team,x:x,y:y,offender,victim,until:G.t+2.5};G.msg='Vantagem';G.msgSub=offender.name+(card?' · '+card:'')+' · segue o jogo';try{sfx('whistle')}catch(e){}
+  G.refCard=cc?{color:cc==='red'?'#e63238':'#ffe13c',until:G.t+3}:null;
+  if(cc)G.cardShow={color:cc,name:offender.name,num:offender.num,team:offender.team,text:card,until:performance.now()+3200,x:offender.x,y:offender.y};
+  return true}
  if(inBox){startPenalty(victim.team,offender,victim);G.msg='Penálti';G.msgSub=offender.name+(card?' · '+card:'')+' · '+G.teams[victim.team].s}
  else{const fx=clamp(x,X0+12,X1-12),fy=clamp(y,Y0+12,Y1-12);if(window.fkInRange&&window.fkInRange(victim.team,fx,fy))window.startFK(victim.team,fx,fy);else startSetPiece('freekick',victim.team,fx,fy);G.msg=card||'Falta · livre';G.msgSub=offender.name+' · '+G.teams[victim.team].s}
  G.refCard=cc?{color:cc==='red'?'#e63238':'#ffe13c',until:G.t+3}:null;
@@ -2114,7 +2142,38 @@ function startPenalty(team,offender,victim,forced){
 }
 
 const rulesStep=step;
-step=function(){rulesStep();if(!G||G.paused)return;for(const p of G.players)p.foulCd=Math.max(0,(p.foulCd||0)-DT);const r=G.ref||(G.ref={x:W/2,y:H/2-90});const b=G.ball,tx=clamp(b.x-55,X0+30,X1-30),ty=clamp(b.y+(b.y<H/2?65:-65),Y0+30,Y1-30);r.x+=(tx-r.x)*.035;r.y+=(ty-r.y)*.035};
+step=function(){rulesStep();if(!G||G.paused)return;for(const p of G.players)p.foulCd=Math.max(0,(p.foulCd||0)-DT);advStep();refStep()};
+/* resolução da vantagem: mantida a posse, segue o jogo; perdida a posse ou esgotado o tempo sem ela, volta-se à falta */
+function advStep(){
+ const A=G.adv;if(!A)return;
+ if(G.state!=='play'){G.adv=null;return}
+ const b=G.ball,o=b.owner,keep=(o&&o.team===A.team)||(!o&&b.lastTeam===A.team);
+ if((o&&o.team!==A.team)||(G.t>=A.until&&!keep)){G.adv=null;G.advBack=(G.advBack||0)+1;startSetPiece('freekick',A.team,clamp(A.x,X0+12,X1-12),clamp(A.y,Y0+12,Y1-12));G.msg='Livre · sem vantagem';return}
+ if(G.t>=A.until){G.adv=null;G.advOK=(G.advOK||0)+1;G.msg='';G.msgSub=''}
+}
+/* o árbitro procura a diagonal do jogo, fora da linha da bola e dos jogadores, com velocidade limitada; os assistentes acompanham a linha defensiva pela linha lateral */
+function refStep(){
+ const r=G.ref||(G.ref={x:W/2,y:H/2-90}),b=G.ball,live=G.state==='play';
+ const bx=b.x+(live?b.vx*12:0),by=b.y+(live?b.vy*12:0);
+ let tx=clamp(bx-55,X0+30,X1-30),ty=clamp(by+(by<H/2?65:-65),Y0+30,Y1-30);
+ if(!live&&G.setp){tx=clamp(b.x-(sd(G.setp.team||0)===0?1:-1)*50,X0+20,X1-20);ty=clamp(b.y+(b.y<H/2?55:-55),Y0+20,Y1-20)}
+ let ax=(tx-r.x)*.035,ay=(ty-r.y)*.035;
+ for(const p of G.players){if(p.off)continue;const dx=r.x-p.x,dy=r.y-p.y,d=Math.hypot(dx,dy);if(d>0&&d<28){const k=(28-d)/d*.08;ax+=dx*k;ay+=dy*k}}
+ {const dx=r.x-b.x,dy=r.y-b.y,d=Math.hypot(dx,dy);if(d>0&&d<34){const k=(34-d)/d*.08;ax+=dx*k;ay+=dy*k}}
+ const m=Math.hypot(ax,ay),cap=1.9;if(m>cap){ax*=cap/m;ay*=cap/m}
+ r.x=clamp(r.x+ax,X0+10,X1-10);r.y=clamp(r.y+ay,Y0+10,Y1-10);
+ /* assistentes: um por linha lateral, ao nível do penúltimo defensor da sua metade (ou da bola, se mais adiantada) */
+ const AS=G.asst||(G.asst=[{x:X0+120,y:Y0-13,flag:false,vx:0},{x:X1-120,y:Y1+13,flag:false,vx:0}]);
+ for(let i=0;i<2;i++){
+  const A=AS[i],dt=i===0?(G.o.homeLeft?0:1):(G.o.homeLeft?1:0);      // equipa que defende a baliza esquerda / direita
+  const xs=G.players.filter(p=>!p.off&&p.team===dt).map(p=>Math.abs(p.x-(sd(dt)===0?X0:X1))).sort((a,c)=>a-c);
+  const dl=xs.length>1?xs[1]:(xs[0]||200),lineX=sd(dt)===0?X0+dl:X1-dl;
+  let t=i===0?Math.min(lineX,b.x):Math.max(lineX,b.x);
+  t=i===0?clamp(t,X0+10,W/2+60):clamp(t,W/2-60,X1-10);
+  const d=clamp(t-A.x,-1.8,1.8);A.vx=d;A.x+=d;
+  A.flag=!!(G.offLine&&performance.now()<G.offLine.until&&((G.offLine.px<W/2)===(i===0)));
+ }
+}
 const refereeStart=startSetPiece;
 startSetPiece=function(kind,team,x,y){if(kind==='corner')discipline()[team].corners++;refereeStart(kind,team,x,y);if(kind==='freekick'){G.msg='Livre';G.setp.taker.fx=sd(team)===0?1:-1;G.setp.taker.fy=0}};
 const fullStats=statsTable;

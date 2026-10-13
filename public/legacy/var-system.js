@@ -22,7 +22,7 @@ window.checkOffside=function(q){
   if(!pd||pd.type!=="pass"||q===pd.from||G.t-o.time>7||q.role==="GK")return false;
   var m=o.set.get(q);if(m==null)return false;
   G.offs=null;
-  if(m<9&&Math.random()<.65){G.varNote={type:"offside",team:o.team,player:q,margin:m,lineX:o.lineX,x:q.x,y:q.y,t:G.t,passer:pd.from};return false}
+  if(m<6){return false}      // margem mínima de tolerância (≈ 40 cm): o benefício é do atacante; acima disso o fiscal assinala sempre
   callOffside(q,o);return true;
 };
 function callOffside(q,o){
@@ -41,7 +41,7 @@ goal=function(t){
   if(!active()||G.varDone===true||G.state==="var")return _goal.apply(this,arguments);
   var n=G.varNote;
   if(!n||n.team!==t||G.t-n.t>16)return _goal.apply(this,arguments);
-  var disallow=n.type==="offside"?true:Math.random()<.55;
+  var disallow=n.type==="offside"?true:!!n.reck;      // o VAR anula se a entrada foi descoordenada (de lado ou a grande velocidade)
   G.state="var";G.var={t:t,note:n,disallow:disallow,tm:0,shown:false};
   G.msg="VAR";G.msgSub="A verificar o golo…";G.charging=false;G.charge=0;G.passTarget=null;
   G.offLine=null;try{sfx("ui")}catch(e){}
