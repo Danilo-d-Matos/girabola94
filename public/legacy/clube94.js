@@ -85,7 +85,34 @@ function oficial(t) {
   return b ? { shirt: b.shirt, accent: b.accent, shorts: b.shorts, socks: b.socks, pattern: b.pattern | 0, custom: false }
            : { shirt: t.c1, accent: t.c2, shorts: t.c2, socks: t.c1, pattern: 0, custom: false };
 }
-function alternativo(t) { return { shirt: t.c2 === "#151515" || t.c2 === "#1c1c1c" ? "#f2f2f2" : t.c2, accent: t.c1, shorts: t.c1, socks: t.c2, pattern: 0, custom: true }; }
+/* equipamentos alternativos de todos os clubes (criados para o jogo; não são equipamentos reais): camisola, detalhes, calções, meias, padrão */
+var ALT = {
+  PET: ["#1643b9", "#ffd51e", "#1643b9", "#1643b9", 3], "1AG": ["#f5f5f0", "#cf1f27", "#151515", "#f5f5f0", 3], SAG: ["#f5f5f0", "#168347", "#168347", "#168347", 8],
+  WIL: ["#ffdc15", "#16833e", "#16833e", "#ffdc15", 10], KAB: ["#de2428", "#f5f5f0", "#f5f5f0", "#de2428", 3], INT: ["#245cc4", "#151515", "#151515", "#245cc4", 1],
+  HUI: ["#f5f5f0", "#df2528", "#df2528", "#f5f5f0", 4], SSA: ["#f5f5f0", "#df2428", "#df2428", "#f5f5f0", 10], BRA: ["#2359bc", "#f5f5f1", "#f5f5f1", "#2359bc", 9],
+  LIB: ["#2455bb", "#f5781c", "#2455bb", "#f5781c", 3], ACA: ["#b29450", "#181818", "#181818", "#b29450", 6], CAA: ["#255ec5", "#f5f5f2", "#255ec5", "#f5f5f2", 5],
+  "1MA": ["#f5f5f2", "#d82227", "#d82227", "#f5f5f2", 2], LSU: ["#65bde5", "#f5f5f2", "#f5f5f2", "#65bde5", 8], CAB: ["#245bbb", "#f5f5f2", "#245bbb", "#f5f5f2", 7],
+  FCL: ["#2357b9", "#f5f5f2", "#2357b9", "#2357b9", 3]
+};
+function alternativo(t) {
+  var a = ALT[t.s];
+  return a ? { shirt: a[0], accent: a[1], shorts: a[2], socks: a[3], pattern: a[4], custom: true }
+           : { shirt: t.c2, accent: t.c1, shorts: t.c1, socks: t.c2, pattern: 0, custom: true };
+}
+/* equipamento de qualquer clube: o do utilizador usa o que ele configurou; os outros usam o oficial e o alternativo de origem */
+function kitPara(idx, qual) {
+  if (CL.team === idx) return kitDe(CL, qual === "away" ? "away" : "home");
+  var t = TEAMS[idx]; return qual === "away" ? alternativo(t) : oficial(t);
+}
+function kitPadrao(idx) { return CL.team === idx && CL.kitUse === "away" ? "away" : "home"; }
+function kitInfo(idx, qual) {
+  var k = kitPara(idx, qual);
+  return CL.team === idx && k.custom && qual === "home" ? "Equipamento criado por ti" : qual === "home" ? "Equipamento oficial" : (CL.team === idx && CL.kits && CL.kits.away ? "Alternativo criado por ti" : "Alternativo do clube");
+}
+function paraJogo(k, t) {
+  if (!k.custom) { var b = typeof KIT_LOOKS !== "undefined" && KIT_LOOKS[t.s]; if (b) return { shirt: b.shirt, accent: b.accent, shorts: b.shorts, socks: b.socks, sleeve: b.sleeve, trim: b.trim, pattern: b.pattern | 0 }; }
+  return { shirt: k.shirt, accent: k.accent, shorts: k.shorts, socks: k.socks, sleeve: k.shirt, trim: k.accent, pattern: k.pattern | 0, custom: !!k.custom };
+}
 function kitDe(fonte, qual) { var t = equipa(), k = fonte.kits && fonte.kits[qual]; return k || (qual === "home" ? oficial(t) : alternativo(t)); }
 function kitEmUso(fonte) { return kitDe(fonte, fonte.kitUse === "away" ? "away" : "home"); }
 function kitSvg(k, w) {
@@ -236,6 +263,7 @@ function vistaKit() {
     '<div class="c94-pvctl"><button type="button" class="c94-btn sec peq" id="pvF">Frente</button><button type="button" class="c94-btn sec peq" id="pvC">Costas</button><button type="button" class="c94-btn sec peq" id="pvR">Rodar</button>' +
     '<label class="c94-sel">Número<select id="pvNum">' + roster.map(function (a) { return '<option value="' + a.id + '"' + (a.id === PREVNUM ? ' selected' : '') + '>' + numD(a) + ' · ' + esc(nomeD(a)) + '</option>'; }).join("") + '</select></label></div></section>' +
     '<section class="c94-painel"><div class="c94-ph"><h3>Personalização</h3><div class="c94-seg" role="group"><button type="button" data-kq="home" aria-pressed="' + (KITSEL === "home") + '">Principal</button><button type="button" data-kq="away" aria-pressed="' + (KITSEL === "away") + '">Alternativo</button></div></div>' +
+    '<div class="c94-kitacoes"><button type="button" class="c94-btn sec peq" id="kOrig">' + (KITSEL === "home" ? "Voltar ao equipamento oficial" : "Voltar ao alternativo original") + '</button><span>' + (D.kits[KITSEL] ? "Alteraste este equipamento." : (KITSEL === "home" ? "Estás a usar o oficial." : "Estás a usar o alternativo original do clube.")) + '</span></div>' +
     '<div class="c94-scroll c94-kitcor"><div class="c94-cores4"><div><h4 class="c94-gr">Camisola</h4>' + swatches("kShirt", k.shirt) + '</div><div><h4 class="c94-gr">Detalhes / padrão</h4>' + swatches("kAcc", k.accent) + '</div><div><h4 class="c94-gr">Calções</h4>' + swatches("kShorts", k.shorts) + '</div><div><h4 class="c94-gr">Meias</h4>' + swatches("kSocks", k.socks) + '</div></div>' +
     '<h4 class="c94-gr">Padrão da camisola</h4>' + padroesHTML(k) +
     '<p class="c94-nota">As cores e o padrão aplicam-se à camisola 3D e aos modelos simples. A cor de "Detalhes / padrão" é a das riscas e faixas.</p></div></section></div>';
@@ -355,6 +383,7 @@ function ligar() {
       inp.parentNode.querySelectorAll(".c94-cor").forEach(function (b) { b.onclick = function () { inp.value = b.dataset.c; edita(p[1], b.dataset.c); }; });
     });
     el("kPats").onclick = function (e) { var b = e.target.closest("[data-pat]"); if (b) edita("pattern", +b.dataset.pat); };
+    el("kOrig").onclick = function () { delete D.kits[KITSEL]; mostrar(); };
     el("pvNum").onchange = function () { PREVNUM = +el("pvNum").value; if (CENA) CENA.atualizar(); };
   }
   el("clGuardar").onclick = function () { if (guardar()) mostrar(); };
@@ -384,7 +413,7 @@ function barraEstado() {
 function repor() {
   if (TAB === "equipa") { D.form = "221"; D.lineup = {}; D.tactic = "bal"; D.tac = null; SEL = 0; }
   else if (TAB === "plantel") { D.names = {}; D.nums = {}; BUSCA = ""; FIL = "all"; }
-  else if (TAB === "kit") { delete D.kits[KITSEL]; }
+  else if (TAB === "kit") { D.kits = {}; D.kitUse = "home"; }
   else { D.tactic = "bal"; D.tac = null; D.diff = "normal"; }
 }
 function exportarPlantel() {
@@ -558,32 +587,35 @@ createMatch = function (o) {
   return g;
 };
 function aplicar(g, o) {
-  if (CL.team == null || o.L !== CL.team || o.mode === "tutorial" || o.online) return;
-  var form = FORMS[o.form] ? o.form : "221", ids = escalacao(form, CL), roster = plantel();
-  g.players.forEach(function (p) {
-    if (p.team !== 0) return;
-    var a = roster.filter(function (x) { return x.id === ids[p.i]; })[0];
-    if (a) assignIdentity(p, a);
-    if (CL.names && CL.names[p.rosterId]) p.name = CL.names[p.rosterId];
-    if (CL.nums && CL.nums[p.rosterId]) p.num = CL.nums[p.rosterId];
-  });
-  if (CL.tac && o.tac === CL.tactic) {
-    var c = CL.tac, v = { n: "Personalizada", d: "Ajustes do teu clube.", line: c.line, support: c.support, press: Math.round(-1 + 2 * c.pressao), pdist: Math.round(-60 + 140 * c.pressao) };
-    Object.defineProperty(TACTICS, "club94", { value: v, enumerable: false, configurable: true, writable: true });   // não aparece nas listas de escolha
-    g.o.tac = "club94";
+  if (o.online || o.mode === "tutorial") return;
+  if (CL.team != null && o.L === CL.team) {
+    var form = FORMS[o.form] ? o.form : "221", ids = escalacao(form, CL), roster = plantel();
+    g.players.forEach(function (p) {
+      if (p.team !== 0) return;
+      var a = roster.filter(function (x) { return x.id === ids[p.i]; })[0];
+      if (a) assignIdentity(p, a);
+      if (CL.names && CL.names[p.rosterId]) p.name = CL.names[p.rosterId];
+      if (CL.nums && CL.nums[p.rosterId]) p.num = CL.nums[p.rosterId];
+    });
+    if (CL.tac && o.tac === CL.tactic) {
+      var c = CL.tac, v = { n: "Personalizada", d: "Ajustes do teu clube.", line: c.line, support: c.support, press: Math.round(-1 + 2 * c.pressao), pdist: Math.round(-60 + 140 * c.pressao) };
+      Object.defineProperty(TACTICS, "club94", { value: v, enumerable: false, configurable: true, writable: true });   // não aparece nas listas de escolha
+      g.o.tac = "club94";
+    }
   }
-  var k = kitEmUso(CL);
-  if (!k.custom) return;
-  var tR = TEAMS[o.R], cR = { c1: tR.c1, c2: tR.c2 };
-  if (colorDist(k.shirt, cR.c1) < 120) cR = { c1: tR.c2, c2: tR.c1 };
-  if (colorDist(k.shirt, cR.c1) < 120) cR = { c1: "#f2f2f2", c2: tR.c1 };
-  g.cols = [{ c1: k.shirt, c2: k.accent }, cR];
-  var base = typeof KIT_LOOKS !== "undefined" && KIT_LOOKS[tR.s];
-  g.kits = [
-    { shirt: k.shirt, accent: k.accent, shorts: k.shorts, socks: k.socks, sleeve: k.shirt, trim: k.accent, pattern: k.pattern | 0, custom: true },
-    base && cR.c1 === tR.c1 ? { shirt: base.shirt, accent: base.accent, shorts: base.shorts, socks: base.socks, sleeve: base.sleeve, trim: base.trim, pattern: base.pattern | 0 }
-      : { shirt: cR.c1, accent: cR.c2, shorts: cR.c2, socks: cR.c1, sleeve: cR.c1, trim: cR.c2, pattern: 0 }
-  ];
+  /* equipamentos: o teu (principal ou alternativo) e o do adversário (automático, principal ou alternativo) */
+  var tJ = TEAMS[o.L], tR = TEAMS[o.R], kJ = kitPara(o.L, o.kit || kitPadrao(o.L)), qR = o.kitR || "auto", kR;
+  var perto = function (a, b) { return colorDist(a, b) < 120; };
+  if (qR === "home" || qR === "away") kR = kitPara(o.R, qR);
+  else {
+    kR = kitPara(o.R, "home");
+    if (perto(kJ.shirt, kR.shirt)) {
+      var alt = kitPara(o.R, "away");
+      kR = !perto(kJ.shirt, alt.shirt) ? alt : { shirt: "#f2f2f2", accent: tR.c1, shorts: tR.c1, socks: "#f2f2f2", pattern: 0, custom: true };
+    }
+  }
+  g.cols = [kJ.custom ? { c1: kJ.shirt, c2: kJ.accent } : { c1: tJ.c1, c2: tJ.c2 }, kR.custom ? { c1: kR.shirt, c2: kR.accent } : { c1: tR.c1, c2: tR.c2 }];
+  g.kits = [paraJogo(kJ, tJ), paraJogo(kR, tR)];
 }
 
 /* clube predefinido nos ecrãs de escolha de equipa */
@@ -602,5 +634,5 @@ showPick = function (mode) { var r = _sp.apply(this, arguments); try { if (mode 
 var _sc = showCup;
 showCup = function () { var r = _sc.apply(this, arguments); try { destacar("data-cup", "Começar a taça com este clube"); } catch (e) {} return r; };
 
-window.G94 = Object.assign(window.G94 || {}, { showClube: function () { if (CL.team != null) abrirRascunho(); mostrar(); }, clubeRecarregar: recarregar, clube: function () { return CL; }, _draft: function () { return D; }, _cena: function () { return CENA; } });
+window.G94 = Object.assign(window.G94 || {}, { kitPara: kitPara, kitPadrao: kitPadrao, kitInfo: kitInfo, kitSvg: kitSvg, showClube: function () { if (CL.team != null) abrirRascunho(); mostrar(); }, clubeRecarregar: recarregar, clube: function () { return CL; }, _draft: function () { return D; }, _cena: function () { return CENA; } });
 })();

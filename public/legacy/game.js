@@ -1608,22 +1608,25 @@ function showPrematch(base){
   leaveMatch();
   const o={...base,diff:PREF.diff,rules:PREF.rules,tac:PREF.tactic,form:PREF.form};
   const R=TEAMS[o.R],st=STYLES[R.st],H=o.homeLeft?o.L:o.R,A=o.homeLeft?o.R:o.L;
-  const STEPS=[["rules","Regras"],["team","Equipa"],["stad","Estádio"],["ball","Bola"],["diff","Dificuldade"],["go","Pronto"]];
+  const STEPS=[["rules","Regras"],["team","Equipa"],["kit","Equipamento"],["stad","Estádio"],["ball","Bola"],["diff","Dificuldade"],["go","Pronto"]];
   const BALLS=[["auto","Automática","Clássica no campo do bairro e rubro-negra nos estádios."],["rubro_negra","Rubro-negra","Branca com lâminas pretas e filetes vermelhos."],["angola","Angola","Lâminas vermelhas, amarelas e pretas."],["azul","Azul","Triângulos azuis e azul-marinho."],["classica","Clássica","32 gomos pretos e brancos, gasta e suja."],["verde","Verde","Lâminas verdes com pinceladas pretas."]];
   const DIFFD={easy:"Adversários mais lentos e menos precisos. Ideal para aprender.",normal:"Equilíbrio entre desafio e diversão.",hard:"Adversários rápidos, precisos e agressivos."};
   const TIMED={night:"Holofotes, céu escuro e estrelas.",day:"Céu azul, nuvens e luz natural."};
   let step=0;
-  const val={rules:()=>o.rules,var:()=>PREF.offsideVar===false?"off":"on",tac:()=>o.tac,form:()=>o.form,stad:()=>PREF.stadium,time:()=>PREF.daytime,ball:()=>PREF.ballDesign||"auto",diff:()=>o.diff};
+  const kg=(typeof G94!=="undefined"&&G94.kitPara)?G94:null,kDef=()=>kg?kg.kitPadrao(o.L):"home";
+  const val={kit:()=>o.kit||kDef(),kitR:()=>o.kitR||"auto",rules:()=>o.rules,var:()=>PREF.offsideVar===false?"off":"on",tac:()=>o.tac,form:()=>o.form,stad:()=>PREF.stadium,time:()=>PREF.daytime,ball:()=>PREF.ballDesign||"auto",diff:()=>o.diff};
   const card=(g,k,title,desc,sw,th)=>`<button type="button" class="pw-card${th?" th":""}"${th?` style="--th:url(${th})"`:""} data-g="${g}" data-k="${k}" aria-pressed="${val[g]()===k}">${sw?`<i class="pw-sw sw-${sw}"></i>`:""}<b>${title}</b><span>${desc}</span></button>`;
   const grp=(t,inner,cls)=>`<div class="pw-grp"><h3>${t}</h3><div class="pw-cards ${cls||""}">${inner}</div></div>`;
-  const label={rules:()=>RULES[o.rules].n,var:()=>PREF.offsideVar===false?"Desligado":"Ligado",tac:()=>TACTICS[o.tac].n,form:()=>FORMS[o.form].n,stad:()=>STADIUM_INFO[PREF.stadium][0],time:()=>PREF.daytime==="day"?"Dia":"Noite",ball:()=>(BALLS.find(b=>b[0]===(PREF.ballDesign||"auto"))||BALLS[0])[1],diff:()=>DIFF[o.diff].n};
+  const label={kit:()=>(o.kit||kDef())==="away"?"Alternativo":"Principal",kitR:()=>({auto:"Automático",home:"Principal",away:"Alternativo"})[o.kitR||"auto"],rules:()=>RULES[o.rules].n,var:()=>PREF.offsideVar===false?"Desligado":"Ligado",tac:()=>TACTICS[o.tac].n,form:()=>FORMS[o.form].n,stad:()=>STADIUM_INFO[PREF.stadium][0],time:()=>PREF.daytime==="day"?"Dia":"Noite",ball:()=>(BALLS.find(b=>b[0]===(PREF.ballDesign||"auto"))||BALLS[0])[1],diff:()=>DIFF[o.diff].n};
+  const kcard=(g,k,title,desc,team,q)=>`<button type="button" class="pw-card" data-g="${g}" data-k="${k}" aria-pressed="${val[g]()===k}">${kg&&q?kg.kitSvg(kg.kitPara(team,q),64):""}<b>${title}</b><span>${desc}</span></button>`;
   const body={
+    kit:()=>grp("O teu equipamento · "+TEAMS[o.L].n,kcard("kit","home","Principal",(kg?kg.kitInfo(o.L,"home"):""),o.L,"home")+kcard("kit","away","Alternativo",(kg?kg.kitInfo(o.L,"away"):""),o.L,"away"),"c2")+grp("Equipamento do adversário · "+TEAMS[o.R].n,kcard("kitR","auto","Automático","O adversário muda de equipamento se as cores forem parecidas com as tuas.",o.R,"")+kcard("kitR","home","Principal","",o.R,"home")+kcard("kitR","away","Alternativo","",o.R,"away"),"c3"),
     rules:()=>grp("Modo de jogo",Object.entries(RULES).map(([k,r])=>card("rules",k,r.n,r.d)).join(""),"c2")+grp("Fora de jogo e VAR",card("var","on","Ligado","Impedimentos assinalados e VAR a rever golos duvidosos.")+card("var","off","Desligado","Sem fora de jogo nem VAR."),"c2"),
     team:()=>grp("Tática",Object.entries(TACTICS).map(([k,t])=>card("tac",k,t.n,t.d)).join(""),"c3")+grp("Formação",Object.entries(FORMS).map(([k,f])=>card("form",k,f.n,f.d)).join(""),"c3"),
     stad:()=>grp("Estádio",Object.entries(STADIUM_INFO).map(([k,v])=>card("stad",k,v[0],v[1],"","modelos/miniaturas/"+k+"_"+PREF.daytime+".jpg")).join(""),"c3")+grp("Hora do jogo",card("time","night","Noite",TIMED.night,"night")+card("time","day","Dia",TIMED.day,"day"),"c2"),
     ball:()=>grp("Tipo de bola",BALLS.map(([k,n,d])=>card("ball",k,n,d,"","modelos/bolas/thumb_"+k+".png")).join(""),"c3")+(["girassol","diamante"].includes(cosm("ball").id)?`<p class="note">A bola especial escolhida na Carreira tem prioridade sobre esta escolha.</p>`:""),
     diff:()=>grp("Dificuldade",Object.entries(DIFF).map(([k,d])=>card("diff",k,d.n,DIFFD[k])).join(""),"c3"),
-    go:()=>`<div class="pw-grp"><h3>Tudo pronto</h3><div class="pw-sum">${[["rules","Modo",0],["var","Fora de jogo e VAR",0],["tac","Tática",1],["form","Formação",1],["stad","Estádio",2],["time","Hora",2],["ball","Bola",3],["diff","Dificuldade",4]].map(([g,n,s])=>`<button type="button" class="pw-chip" data-jump="${s}"><small>${n}</small><b>${label[g]()}</b></button>`).join("")}</div><p class="note" style="text-align:center">Toca numa escolha para a mudar.</p></div>`
+    go:()=>`<div class="pw-grp"><h3>Tudo pronto</h3><div class="pw-sum">${[["rules","Modo",0],["var","Fora de jogo e VAR",0],["tac","Tática",1],["form","Formação",1],["kit","O teu equipamento",2],["kitR","Equip. do adversário",2],["stad","Estádio",3],["time","Hora",3],["ball","Bola",4],["diff","Dificuldade",5]].map(([g,n,s])=>`<button type="button" class="pw-chip" data-jump="${s}"><small>${n}</small><b>${label[g]()}</b></button>`).join("")}</div><p class="note" style="text-align:center">Toca numa escolha para a mudar.</p></div>`
   };
   app.innerHTML=`<section class="screen pw">
    <div class="pw-top"><button class="back" id="qBack">${BACK}Voltar</button><div class="pw-title"><p class="eyebrow">${o.mode==="season"?`Jornada ${S.round+1} de ${S.fix.length}`:"Jogo rápido"}</p><h2>Antes do jogo</h2></div><button class="btn ghost small" id="pwSkip" type="button">Jogar já</button></div>
@@ -1640,7 +1643,7 @@ function showPrematch(base){
   </section>`;
   const save=(g,k)=>{
     if(g==="rules"){o.rules=k;PREF.rules=k}else if(g==="var")PREF.offsideVar=k==="on";else if(g==="tac"){o.tac=k;PREF.tactic=k}else if(g==="form"){o.form=k;PREF.form=k}
-    else if(g==="stad"){PREF.stadium=k;const mm=document.querySelector(".pw-mid .muted");if(mm)mm.textContent=STADIUM_INFO[k][0]}else if(g==="time")PREF.daytime=k;else if(g==="ball")PREF.ballDesign=k;else if(g==="diff"){o.diff=k;PREF.diff=k}
+    else if(g==="kit")o.kit=k;else if(g==="kitR")o.kitR=k;else if(g==="stad"){PREF.stadium=k;const mm=document.querySelector(".pw-mid .muted");if(mm)mm.textContent=STADIUM_INFO[k][0]}else if(g==="time")PREF.daytime=k;else if(g==="ball")PREF.ballDesign=k;else if(g==="diff"){o.diff=k;PREF.diff=k}
     savePrefs();
   };
   const draw=(dir)=>{

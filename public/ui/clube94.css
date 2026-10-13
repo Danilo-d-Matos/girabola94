@@ -166,3 +166,5 @@
   .c94-painel{padding:8px 10px;gap:6px}.c94-resumo{gap:10px}.c94-total b{font-size:26px}
   .c94-lado button{padding:7px 12px}
 }
+.c94-kitacoes{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;font-size:12px;color:var(--tx2)}
+.pw-card svg{width:64px;height:auto;margin-bottom:4px}
