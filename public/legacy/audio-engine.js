@@ -237,8 +237,6 @@ function injectOptions(){
   var o=document.querySelector(".options-screen");if(!o||o.querySelector(".aud-panel"))return;
   var p=document.createElement("div");p.className="panel aud-panel";p.innerHTML='<p class="panel-title">Som e música</p>';
   p.appendChild(slider("Efeitos","sfxVol",.9));p.appendChild(slider("Bola","ballVol",1));p.appendChild(slider("Árbitro","refVol",1));p.appendChild(slider("Adeptos","crowdVol",.8));p.appendChild(slider("Música","musicVol",.6));
-  p.appendChild(seg("Estilo musical","musicStyle",[["auto","Automático"],["semba","Semba"],["kizomba","Kizomba"],["kuduro","Kuduro"],["off","Sem música"]],"auto"));
-  p.appendChild(seg("Música durante o jogo","gameMusic",[["low","Baixa"],["normal","Normal"],["off","Desligada"]],"low"));
   var n=document.createElement("p");n.className="note";n.textContent="A bola, os apitos e os adeptos usam gravações; a música e os sons de interface são gerados pelo jogo. O público reage aos remates, defesas, golos e faltas.";p.appendChild(n);
   o.appendChild(p);
 }

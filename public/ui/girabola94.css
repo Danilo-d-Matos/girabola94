@@ -103,3 +103,6 @@
 .g94-form{display:grid;gap:10px;max-width:420px}.g94-form label{display:grid;gap:4px;font-size:13px;color:var(--g94-texto2)}
 .g94-nome[data-go],.g94-avatar[data-go]{cursor:pointer}
 @media (max-width:820px){.g94-eq,.g94-kits{grid-template-columns:1fr}}
+.g94-card.b1,.g94-card.b2{grid-column:span 6}
+@media (max-width:640px){.g94-tab svg{display:block!important}.g94-tab{padding:10px 12px}.g94-nav{justify-content:space-between}}
+.brand-home.brand-home .brand-logo94{display:block;height:clamp(40px,7vh,64px);width:auto}.brand-home .brand-rule{display:none}

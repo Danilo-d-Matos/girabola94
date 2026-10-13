@@ -65,8 +65,7 @@ function montar() {
     { cls: "i2", id: "mChallenge", ic: "tatica", k: "Desafios", t: "Desafio", s: "Recuperar de 0–1", d: "Vire o jogo e prove o seu valor.", art: "desafio" },
     { cls: "i3", id: "mTut", ic: "tutorial", k: "Aprender", t: "Tutorial", s: "Controlos", d: "Domine o jogo, passo a passo.", art: "tutorial" },
     { cls: "b1", id: "mOnline", ic: "online", k: "Online", t: "Jogo online", s: "1 contra 1", d: "Enfrente jogadores de todo o país.", art: "online", off: !temOnline },
-    { cls: "b2", id: "mOpt", ic: "opcoes", k: "Personalização", t: "Opções e controlos", s: "", d: "Personalize a sua experiência.", art: "opcoes" },
-    { cls: "b3", id: "mData", ic: "dados", k: "Dados", t: "Exportar ou importar época", s: "", d: "Guarda ou carrega a tua carreira.", art: "dados" }
+    { cls: "b2", id: "mOpt", ic: "opcoes", k: "Personalização", t: "Opções e controlos", s: "", d: "Personalize a sua experiência.", art: "opcoes" }
   ];
   var h = '<div class="g94"><header class="g94-top"><div class="g94-marca"><img class="g94-logo" src="ui/logo-girabola94.png" alt="' + NOME + '"><p class="g94-slogan">Futebol angolano · Mais que um jogo</p></div>' +
     '<nav class="g94-nav" role="tablist" aria-label="Navegação principal">' + tabs.map(function (t) {

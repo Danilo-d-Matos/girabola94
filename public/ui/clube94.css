@@ -168,3 +168,32 @@
 }
 .c94-kitacoes{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;font-size:12px;color:var(--tx2)}
 .pw-card svg{width:64px;height:auto;margin-bottom:4px}
+
+/* ---- telemóvel (vertical e horizontal baixo): o ecrã do clube passa a ser uma página que se desloca, sem painéis cortados ---- */
+@media (max-width:820px),(max-height:520px){
+  .screen.g94-screen.c94-root{display:block;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:0!important}
+  .c94-head{grid-template-columns:auto minmax(0,1fr) auto;gap:8px;margin-bottom:8px}
+  .c94-head .c94-btn,.c94-voltar{padding:8px 10px;font-size:12px}.c94-voltar span{display:none}
+  .c94-id{min-width:0}.c94-id h2{font-size:20px;white-space:normal}.c94-id small{display:none}
+  .c94-abas{grid-column:1/-1;order:5;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.c94-abas button{white-space:nowrap;padding:8px 12px;font-size:12px}
+  .c94-main{display:block;overflow:visible;margin:8px 0}
+  .c94-duas,.c94-duas.kitv,.c94-tres{display:flex;flex-direction:column;overflow:visible;gap:10px}
+  .c94-tres>section:first-child,.c94-tres>section:nth-child(2){display:flex}
+  .c94-painel,.c94-painel.full{min-height:0;overflow:visible;height:auto}
+  .c94-formas{grid-template-columns:repeat(3,minmax(0,1fr))}.c94-formas button{flex-direction:column;text-align:center}.c94-formas small{display:none}
+  .c94-formas.col{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .c94-campoWrap{flex:none;height:min(78vw,52vh,420px);min-height:230px}
+  .c94-pv.c94-3d{flex:none;height:min(95vw,50vh,420px);min-height:260px}
+  .c94-scroll{max-height:none;overflow:visible}
+  .c94-grelha{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;grid-auto-rows:auto}
+  .c94-plcorpo{display:block}.c94-lado{flex-direction:row;flex-wrap:wrap;margin-bottom:8px}.c94-lado button{padding:6px 10px;font-size:13px}
+  .c94-resumo{gap:8px}.c94-busca{min-width:0;flex:1 1 100%}
+  .c94-cores4{grid-template-columns:1fr}
+  .c94-sl{grid-template-columns:96px 1fr 38px}
+  .c94-barra{position:sticky;bottom:0;z-index:6;margin:0 -2px;padding:8px 10px;gap:6px;background:#0a2238f5}
+  .c94-barra .c94-esq{gap:6px}.c94-barra .c94-btn{padding:8px 10px;font-size:12px}
+  .c94-root .c94-barra{padding-right:64px}
+  .c94-gridclubes{overflow:visible}.c94-escolha{height:auto}
+}
+@media (max-width:820px) and (max-height:520px){.c94-grelha{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:820px),(max-height:520px){.c94-barra .c94-rot{display:none}}

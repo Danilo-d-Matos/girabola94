@@ -39,13 +39,19 @@ const scripts = [
   "legacy/tutorial-ui.js",
   "legacy/online.js",
   "legacy/setpieces94.js",
+  "legacy/responsive94.js",
   "legacy/progress94.js",
   "legacy/clube94.js",
   "legacy/menu94.js"
 ];
-for (const src of scripts) {
+// O ecrã só aparece quando o último script (o menu novo) acabou de carregar: assim não se vê o menu antigo por um instante.
+const revelar = () => document.documentElement.classList.remove("booting");
+setTimeout(revelar, 12000);
+addEventListener("error", () => setTimeout(revelar, 1500));
+scripts.forEach((src, i) => {
   const s = document.createElement("script");
   s.src = base + src;
   s.async = false; // mantém a ordem de execução
+  if (i === scripts.length - 1) { s.onload = () => requestAnimationFrame(revelar); s.onerror = revelar; }
   document.body.appendChild(s);
-}
+});

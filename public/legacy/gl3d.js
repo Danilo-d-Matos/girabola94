@@ -907,7 +907,7 @@ function buildScene(){
      else{q.fillStyle=DAY?"rgba(0,0,0,.16)":"rgba(255,255,255,.05)";for(let x=0;x<cw;x+=20)q.fillRect(x,0,1,ch);for(let y=9;y<ch-6;y+=9)q.fillRect(0,y,cw,1);
        for(let x=6;x<cw;x+=12){q.fillStyle=DAY?"#cfd6d8":"#fff3c4";q.fillRect(x,2,3,2);if(!DAY){q.fillStyle="rgba(255,243,196,.22)";q.fillRect(x-1,4,5,2)}}
        q.fillStyle="#f2b705";q.fillRect(0,ch-6,cw,2);q.fillStyle="#c8102e";q.fillRect(0,ch-4,cw,2);q.fillStyle=DAY?"#444c50":"#05090d";q.fillRect(0,ch-2,cw,2);
-       ledAt(q,Math.round(cw/2-32),Math.round(ch*.3),"GIRABOLA","CRAQUE","#ffcf4a",64,16)}
+       ledAt(q,Math.round(cw/2-32),Math.round(ch*.3),"GIRABOLA","94","#ffcf4a",64,16)}
      quadMesh([xL,zF,yF-.6,xR,zF,yF-.6,xR,zF+STY.roofH,yF-.6,xL,zF+STY.roofH,yF-.6],UV1,new T.MeshBasicMaterial({map:PXT(c),transparent:true,depthWrite:false,side:T.DoubleSide}),.5);
      // beiras das coberturas laterais
      const ec=mkCanvas(Math.round((yB-yN)/3),Math.round(STY.roofH*.8/3)),eq=ec.getContext("2d"),ew=ec.width,eh=ec.height;
