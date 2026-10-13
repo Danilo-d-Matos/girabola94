@@ -690,6 +690,36 @@ function stepSetPiece(){
 const CAND=[[0,0],[.06,0],[-.05,0],[0,.08],[0,-.08],[.05,.07],[.05,-.07]];
 function wouldBeOffside(p,q){if(PREF.offsideVar===false||(G.tut&&!G.tut.allowOff))return false;const sk=G.setp&&G.setp.kind;if(sk==="throw"||sk==="goalkick"||sk==="corner")return false;const s=sd(p.team)===0?1:-1;let a=-1e9,b2=-1e9;for(const o of G.players){if(o.off||o.team===p.team)continue;const v=s*o.x;if(v>a){b2=a;a=v}else if(v>b2)b2=v}return s*q.x>Math.max(s*W/2,s*p.x,b2)+4}
 function deepestDef(t){let m=0;for(const q of G.players){if(q.off||q.team===t||q.role==="GK")continue;m=Math.max(m,nxOf(t,q.x))}return m}
+/* ponto de apoio curto à volta do portador: livre de adversários, com linha de passe limpa, perto de quem o vai ocupar e longe de outros apoios */
+function offerPoint(t,o,p,taken){
+  const f=Math.atan2(o.fy,o.fx);let best=null,bs=-1e9;
+  for(const da of [-2.0,-1.2,1.2,2.0,3.14]){
+    const a=f+da,r=80,pt={x:clamp(o.x+Math.cos(a)*r,X0+20,X1-20),y:clamp(o.y+Math.sin(a)*r,Y0+20,Y1-20)};
+    let md=1e9;for(const q of G.players)if(!q.off&&q.team!==t)md=Math.min(md,Math.hypot(q.x-pt.x,q.y-pt.y));
+    let sc=Math.min(md,120)+(laneClear(o,pt,16)?80:-90)-dist(p,pt)*.18+(Math.abs(da)>3?-15:0);
+    for(const tk of taken)sc-=Math.max(0,60-Math.hypot(tk.x-pt.x,tk.y-pt.y))*1.5;
+    if(sc>bs){bs=sc;best=pt}
+  }
+  return best;
+}
+/* afasta alvos demasiado próximos entre colegas (evita que vários corram para o mesmo ponto) */
+function spreadTargets(field,t){
+  const act=field.filter(p=>p.job!=="press"&&p.job!=="offer"&&p.job!=="mark"&&!(t===0&&p===G.ctrl));
+  for(let pass=0;pass<3;pass++)for(let i=0;i<act.length;i++)for(let j=i+1;j<act.length;j++){
+    const a=act[i],c=act[j],d=Math.hypot(pxOf(t,a.bx)-pxOf(t,c.bx),pyOf(a.by)-pyOf(c.by));
+    if(d<38){const push=(38-d)/(Y1-Y0)*.5+.012,sg=a.by===c.by?(i%2?1:-1):(a.by<c.by?-1:1);a.by=clamp(a.by+sg*push,.06,.94);c.by=clamp(c.by-sg*push,.06,.94)}
+  }
+}
+/* linha defensiva coordenada: os defesas partilham a profundidade, sobem e descem juntos (no máx. ~0,05 do campo por segundo) e ficam do lado da baliza do atacante mais adiantado */
+function coordLine(field,opps,t){
+  const ds=field.filter(p=>p.role==="D"&&(p.job==="hold"||p.job==="support"));
+  if(!ds.length)return;
+  const tgt=ds.reduce((a,p)=>a+p.bx,0)/ds.length;
+  let cap=1;const deep=Math.min(1,...opps.filter(q=>q.role!=="GK").map(q=>nxOf(t,q.x)));if(deep<.55)cap=Math.max(.08,deep-.02);
+  G.dline=G.dline||[tgt,tgt];
+  G.dline[t]+=clamp(Math.min(tgt,cap)-G.dline[t],-.014,.014);
+  for(const p of ds)p.bx=clamp(G.dline[t]+(p.bx-tgt)*.5,.06,.62);
+}
 function teamBrain(t){
   const b=G.ball,o=b.owner,our=!!(o&&o.team===t),D=t===1?G.D:MATE;
   const st=t===1?STYLES[G.styleR]:STYLES.posse,tac=t===0?TACTICS[G.o.tac]||TACTICS.bal:TACTICS.bal;
@@ -705,7 +735,7 @@ function teamBrain(t){
     const dl=deepestDef(t);
     for(const p of field){
       if(p===o)continue;
-      if(p.role==="F"&&bn>.28&&(st.counter>.5||Math.random()<.4+tac.support*3)){p.bx=clamp(Math.max(p.bx,dl+(Math.random()<.14?.025:-.012)),.1,.93);p.job="run"}
+      if(p.role==="F"&&bn>.28&&(st.counter>.5||Math.random()<.4+tac.support*3)){p.bx=clamp(Math.min(Math.max(p.bx,dl-.03),dl-(Math.random()<.14?.004:.012)),.1,.93);p.job="run"}      // corre até à linha, sem a passar (nunca em fora de jogo)
       let best=[p.bx,p.by],bs=-1e9;
       for(const [ox,oy] of CAND){
         const nx=clamp(p.bx+ox,.06,.93),ny=clamp(p.by+oy,.06,.94),pt={x:pxOf(t,nx),y:pyOf(ny)};
@@ -714,6 +744,25 @@ function teamBrain(t){
         if(s>bs){bs=s;best=[nx,ny]}
       }
       p.bx=best[0];p.by=best[1];if(p.job!=="run")p.job="support";
+    }
+    /* ninguém espera em posição de fora de jogo à frente da última linha (só conta quando há fora de jogo) */
+    if(PREF.offsideVar!==false&&!G.tut)for(const p of field)if(p!==o&&p.bx>dl-.006)p.bx=dl-.006;
+    /* portador pressionado: os dois colegas mais próximos oferecem linha de passe curta */
+    if(o&&o.role!=="GK"&&bn<.5&&minOppDist(o)<90){      // antes de a pressão chegar: os colegas mais próximos (até 260 u) aproximam-se; no último terço só um, para o ataque não perder gente
+      const cand=field.filter(p=>p!==o&&p.job!=="run"&&dist(p,o)<260).sort((a,c)=>dist(a,o)-dist(c,o)).slice(0,2),taken=[];
+      for(const p of cand){const pt=offerPoint(t,o,p,taken);if(pt){taken.push(pt);p.bx=clamp(nxOf(t,pt.x),.06,.93);p.by=clamp((pt.y-Y0)/(Y1-Y0),.06,.94);p.job="offer"}}
+    }else if(o&&o.role!=="GK"&&bn>.3&&bn<.85){
+      /* com tempo: um médio ou avançado desmarca-se nas costas da defesa, pelo corredor mais livre, sempre do lado de dentro da linha de fora de jogo; um corredor de cada vez */
+      G.runT=G.runT||[0,0];
+      if(!(G.runT[t]>G.t)){
+        const cands=field.filter(p=>p!==o&&(p.job==="support"||p.job==="hold")&&nxOf(t,p.x)>.3).sort((a,c)=>nxOf(t,c.x)-nxOf(t,a.x));
+        const p=cands[0];
+        if(p){
+          let bestY=p.by,bd=-1;
+          for(const dy of [-.22,0,.22]){const ny=clamp(p.by+dy,.1,.9),px=pxOf(t,dl-.01),py=pyOf(ny);let md=1e9;for(const q of opps)md=Math.min(md,Math.hypot(q.x-px,q.y-py));if(md>bd){bd=md;bestY=ny}}
+          p.bx=clamp(dl-.01,.1,.93);p.by=bestY;p.job="run";G.runT[t]=G.t+2.4;
+        }
+      }
     }
   }else{
     const pred=predictBall(D.antic);
@@ -740,7 +789,12 @@ function teamBrain(t){
         p.bx=clamp(nxOf(t,mx)*w+p.bx*(1-w),.05,.9);p.by=clamp(((my-Y0)/(Y1-Y0))*w+p.by*(1-w),.05,.95);p.job="mark";
       }
     }
+    /* os defesas não abandonam todos a posição: só o mais próximo da bola sai a pressionar ou a fazer cobertura */
+    const dj=field.filter(p=>p.role==="D"&&(p.job==="press"||p.job==="cover")&&!(t===0&&p===G.ctrl)).sort((a,c)=>Math.hypot(a.x-b.x,a.y-b.y)-Math.hypot(c.x-b.x,c.y-b.y));
+    for(let i=1;i<dj.length;i++)dj[i].job="hold";
   }
+  coordLine(field,opps,t);
+  spreadTargets(field,t);
 }
 function ai(p){
   const b=G.ball,o=b.owner;
@@ -754,10 +808,18 @@ function ai(p){
   if(p.job==="press"){
     const t=o?predictBall(3):predictBall(D.antic),d=Math.hypot(t.x-p.x,t.y-p.y);
     p.sprint=p.energy>.4&&(d<90||(st.press>1&&d<220)||!o);
-    return seek(p,t.x,t.y,1);
+    return seek(p,t.x,t.y,p.energy<.2||(p.stam!=null&&p.stam<.5)?.88:1);      // sem fôlego a pressão é menos intensa
   }
+  if(p.job==="offer"){const tx=pxOf(p.team,p.bx),ty=pyOf(p.by);p.sprint=p.energy>.5&&Math.hypot(tx-p.x,ty-p.y)>70;return seek(p,tx,ty,1)}
   if(p.job==="cover"&&o){const gx=sd(p.team)===0?X0:X1;return seek(p,b.x+(gx-b.x)*.32,b.y+(H/2-b.y)*.3,.95)}
-  if(p.job==="run")p.sprint=p.energy>.55&&st.counter>.5;
+  if(p.job==="run"){
+    p.sprint=p.energy>.55&&st.counter>.5;
+    /* a linha de fora de jogo mexe-se: quem corre nas costas da defesa acompanha-a e nunca fica para lá dela */
+    if(o&&o.team===p.team&&!(typeof PREF!=="undefined"&&PREF.offsideVar===false)){
+      const dir=sd(p.team)===0?1:-1,lineX=pxOf(p.team,deepestDef(p.team)),tx=pxOf(p.team,p.bx),lim=lineX-dir*(6+Math.hypot(p.vx,p.vy)*9);      // margem: a travagem do corredor
+      return seek(p,dir*tx>dir*lim?lim:tx,pyOf(p.by),dir*p.x>dir*lim?.6:.9);
+    }
+  }
   seek(p,pxOf(p.team,p.bx),pyOf(p.by),o&&o.team===p.team?.85:.8);
 }
 function bestPassTarget(p,st){
