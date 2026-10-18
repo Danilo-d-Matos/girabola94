@@ -546,7 +546,41 @@ function makeKitAtlas(id){
   const em=new Image();em.onload=()=>{at.em=em;if(at.ready&&at.kit)at.paint(at.kit)};em.src="modelos/emblemas/"+id+".png";at.em=null;
   return at;
 }
+/* tecido: relevo (malha fina + pregas suaves) em camisola, calções e meias; cetim nas camisolas dos guarda-redes. Só relevo/brilho: a cor continua a vir da textura/atlas. */
+function clothBump(){
+  if(GLBM.clothTex)return GLBM.clothTex;
+  const w=1024,h=512,cv=mkCanvas(w,h),c=cv.getContext("2d");
+  c.fillStyle="#808080";c.fillRect(0,0,w,h);
+  // malha de tricô: pequenas cristas oblíquas
+  c.lineWidth=1.4;
+  for(let y=0;y<h;y+=6)for(let x=0;x<w;x+=6){const o=((x/6+y/6)%2)?1:-1;c.strokeStyle=o>0?"rgba(255,255,255,.20)":"rgba(0,0,0,.20)";c.beginPath();c.moveTo(x,y+5);c.lineTo(x+3,y);c.lineTo(x+6,y+5);c.stroke()}
+  // pregas largas e suaves
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+  for(let i=0;i<46;i++){
+    const x0=rnd()*w,y0=rnd()*h,len=60+rnd()*140,ang=(rnd()-.5)*1.1+Math.PI/2,wd=10+rnd()*26,lt=i%2;
+    const gx=Math.cos(ang),gy=Math.sin(ang),nx=-gy,ny=gx,g=c.createLinearGradient(x0-nx*wd,y0-ny*wd,x0+nx*wd,y0+ny*wd);
+    g.addColorStop(0,"rgba(128,128,128,0)");g.addColorStop(.5,lt?"rgba(255,255,255,.42)":"rgba(0,0,0,.42)");g.addColorStop(1,"rgba(128,128,128,0)");
+    c.save();c.translate(x0,y0);c.rotate(ang-Math.PI/2);c.translate(-x0,-y0);c.fillStyle=g;c.fillRect(x0-wd,y0-len/2,wd*2,len);c.restore();
+  }
+  const t=new T.CanvasTexture(cv);t.wrapS=t.wrapT=T.RepeatWrapping;t.flipY=false;t.colorSpace=T.NoColorSpace;t.minFilter=T.LinearMipmapLinearFilter;t.generateMipmaps=true;
+  try{t.anisotropy=Math.min(8,R.gl.capabilities.getMaxAnisotropy())}catch(e){}
+  return GLBM.clothTex=t;
+}
+function clothify(m,s){if(!m)return m;m.bumpMap=clothBump();m.bumpScale=s==null?1.1:s;m.needsUpdate=true;return m}
+function satin(m){
+  const n=new T.MeshPhongMaterial({color:m.color?m.color.clone():new T.Color(0xffffff),emissive:0x141414,specular:0x8c8c8c,shininess:62});
+  n.map=m.map||null;return n;
+}
 function glbMatSet(look){
+  const s=glbMatSet0(look);
+  if(!s.__cloth){
+    s.__cloth=1;
+    if(look.gk&&!look.ref){s.Camisola=clothify(satin(s.Camisola),.9);s.Calcoes=clothify(satin(s.Calcoes),.7);s.Meias=clothify(s.Meias,.6)}
+    else{clothify(s.Camisola,1.1);clothify(s.Calcoes,.8);clothify(s.Meias,.6)}
+  }
+  return s;
+}
+function glbMatSet0(look){
   const code=look.code||"",id=GLBM.TEAM[code]||"petro_luanda",cu=look.kit&&look.kit.custom&&!look.ref&&!look.gk,key=look.ref?"ref":look.gk?"gk|"+code+"|"+look.gkShirt:cu?"cus|"+id+"|"+[look.kit.shirt,look.kit.accent,look.kit.shorts,look.kit.socks,look.kit.pattern|0].join():id;
   if(GLBM.mats[key])return GLBM.mats[key];
   const tex=glbTeamTex(id),mk=(o)=>new T.MeshLambertMaterial(Object.assign({emissive:0x1a1a1a},o)),set={};
@@ -597,7 +631,7 @@ function glbLook(h,look){
   for(const k in m){if(set[k])m[k].material=set[k]}
   glbNumber(h,look);
 }
-window.__glb={load:glbLoad,look:glbLook,atlas:makeKitAtlas,pat:kitPatDraw,team:GLBM.TEAM};
+window.__glb={load:glbLoad,look:glbLook,atlas:makeKitAtlas,pat:kitPatDraw,team:GLBM.TEAM,cloth:clothify};
 const GL_LOOP=new Set(["Idle_Respirar","Idle_Atento","Andar","Correr","Sprint","Correr_Tras","Passo_Lateral","Conducao_Bola"]);
 function glAct(h,name){
   const g=h.gl;if(g.act[name])return g.act[name];

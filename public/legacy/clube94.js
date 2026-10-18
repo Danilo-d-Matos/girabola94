@@ -586,6 +586,20 @@ createMatch = function (o) {
   try { aplicar(g, o); } catch (e) { console.warn("clube:", e); }
   return g;
 };
+/* equipamentos que o jogo vai usar: o teu (principal/alternativo) e o do adversário (automático evita cores parecidas) */
+function kitsDoJogo(o) {
+  var tR = TEAMS[o.R], kJ = kitPara(o.L, o.kit || kitPadrao(o.L)), qR = o.kitR || "auto", kR;
+  var perto = function (a, b) { return colorDist(a, b) < 120; };
+  if (qR === "home" || qR === "away") kR = kitPara(o.R, qR);
+  else {
+    kR = kitPara(o.R, "home");
+    if (perto(kJ.shirt, kR.shirt)) {
+      var alt = kitPara(o.R, "away");
+      kR = !perto(kJ.shirt, alt.shirt) ? alt : { shirt: "#f2f2f2", accent: tR.c1, shorts: tR.c1, socks: "#f2f2f2", pattern: 0, custom: true };
+    }
+  }
+  return [kJ, kR];
+}
 function aplicar(g, o) {
   if (o.online || o.mode === "tutorial") return;
   if (CL.team != null && o.L === CL.team) {
@@ -604,16 +618,7 @@ function aplicar(g, o) {
     }
   }
   /* equipamentos: o teu (principal ou alternativo) e o do adversário (automático, principal ou alternativo) */
-  var tJ = TEAMS[o.L], tR = TEAMS[o.R], kJ = kitPara(o.L, o.kit || kitPadrao(o.L)), qR = o.kitR || "auto", kR;
-  var perto = function (a, b) { return colorDist(a, b) < 120; };
-  if (qR === "home" || qR === "away") kR = kitPara(o.R, qR);
-  else {
-    kR = kitPara(o.R, "home");
-    if (perto(kJ.shirt, kR.shirt)) {
-      var alt = kitPara(o.R, "away");
-      kR = !perto(kJ.shirt, alt.shirt) ? alt : { shirt: "#f2f2f2", accent: tR.c1, shorts: tR.c1, socks: "#f2f2f2", pattern: 0, custom: true };
-    }
-  }
+  var tJ = TEAMS[o.L], tR = TEAMS[o.R], kk = kitsDoJogo(o), kJ = kk[0], kR = kk[1];
   g.cols = [kJ.custom ? { c1: kJ.shirt, c2: kJ.accent } : { c1: tJ.c1, c2: tJ.c2 }, kR.custom ? { c1: kR.shirt, c2: kR.accent } : { c1: tR.c1, c2: tR.c2 }];
   g.kits = [paraJogo(kJ, tJ), paraJogo(kR, tR)];
 }
@@ -634,5 +639,59 @@ showPick = function (mode) { var r = _sp.apply(this, arguments); try { if (mode 
 var _sc = showCup;
 showCup = function () { var r = _sc.apply(this, arguments); try { destacar("data-cup", "Começar a taça com este clube"); } catch (e) {} return r; };
 
-window.G94 = Object.assign(window.G94 || {}, { kitPara: kitPara, kitPadrao: kitPadrao, kitInfo: kitInfo, kitSvg: kitSvg, showClube: function () { if (CL.team != null) abrirRascunho(); mostrar(); }, clubeRecarregar: recarregar, clube: function () { return CL; }, _draft: function () { return D; }, _cena: function () { return CENA; } });
+/* ---------- pré-visualização 3D dos dois equipamentos no ecrã de pré-jogo ---------- */
+function pararVersus() { var c = CENA; if (c && c.versus) cenaParar(); }
+function versus3D(banner, o) {
+  pararVersus();
+  var imgs = [].slice.call(banner.querySelectorAll(".pw-side img:not(.crest)")); if (imgs.length !== 2) return null;
+  var box = document.createElement("div"); box.className = "pw-vs3d";
+  box.style.cssText = "position:absolute;pointer-events:none;z-index:0;opacity:0;transition:opacity .45s ease";
+  var cv = document.createElement("canvas"); cv.style.cssText = "width:100%;height:100%;display:block"; box.appendChild(cv);
+  banner.style.position = "relative"; banner.insertBefore(box, banner.firstChild);
+  [].slice.call(banner.children).forEach(function (e) { if (e !== box) { e.style.position = "relative"; e.style.zIndex = "1"; } });
+  var ctl = { o: o, atualizar: function (oo) { if (oo) ctl.o = oo; if (ctl.vestir) ctl.vestir(); } };
+  esperarModelo(function () {
+    var T3 = THREE, GLBM = window.__GLBM, GL = window.__glb, c = baseCena(cv, box); c.versus = true;
+    var D = 300, slot = [0, 0], alt = 100, jog = [];
+    for (var i = 0; i < 2; i++) { var p = novoJogadorGLB(T3, GLBM); p.atlas = null; p.mats = null; p.id = null; c.scene.add(p.grp); c.mixers.push(p.mixer); jog.push(p); }
+    function colocar() {
+      var br = banner.getBoundingClientRect(), r0 = imgs[0].getBoundingClientRect(), r1 = imgs[1].getBoundingClientRect();
+      if (!r0.height || !br.width) return false;
+      var l = Math.min(r0.left, r1.left) - 30, r = Math.max(r0.right, r1.right) + 30, t = r0.top - 6, b = r0.bottom + 6;
+      box.style.left = (l - br.left) + "px"; box.style.top = (t - br.top) + "px"; box.style.width = (r - l) + "px"; box.style.height = (b - t) + "px";
+      alt = r0.height; slot = [(r0.left + r0.right) / 2 - l, (r1.left + r1.right) / 2 - l];
+      jog.forEach(function (p, k) { var e = alt / GLBM.H; p.grp.scale.setScalar(e); p.grp.position.set(slot[k], 6, 0); p.grp.rotation.y = k ? -.38 : .38; });
+      return true;
+    }
+    c.ajustar = function (w, h) { c.cam.fov = 2 * Math.atan(h / 2 / D) * 180 / Math.PI; c.cam.near = 20; c.cam.far = 900; c.cam.position.set(w / 2, h / 2, D); c.cam.lookAt(w / 2, h / 2, 0); };
+    function vestir(p, idx, k) {
+      var t = TEAMS[idx], id = GL.team[t.s] || "petro_luanda";
+      GL.look(p.h, { code: t.s, kit: { custom: false }, num: 10 });
+      if (k.custom) {
+        if (!p.atlas || p.id !== id) { p.id = id; p.atlas = GL.atlas(id); p.mats = {}; ["Cabeca", "Bracos", "Camisola", "Calcoes", "Pernas", "Meias", "Chuteiras"].forEach(function (n) { p.mats[n] = new T3.MeshLambertMaterial({ map: p.atlas.tex, emissive: 0x1a1a1a }); }); GL.cloth(p.mats.Camisola, 1.1); GL.cloth(p.mats.Calcoes, .8); GL.cloth(p.mats.Meias, .6); }
+        for (var n in p.mats) if (p.h.gl.meshes[n]) p.h.gl.meshes[n].material = p.mats[n];
+        p.atlas.paint({ shirt: k.shirt, accent: k.accent, shorts: k.shorts, socks: k.socks, pattern: k.pattern | 0, custom: true });
+      }
+    }
+    ctl.vestir = function () {
+      var oo = ctl.o, kk = kitsDoJogo(oo), H = oo.homeLeft ? oo.L : oo.R, hk = oo.homeLeft ? kk[0] : kk[1], ak = oo.homeLeft ? kk[1] : kk[0], A = oo.homeLeft ? oo.R : oo.L;
+      vestir(jog[0], H, hk); vestir(jog[1], A, ak);
+    };
+    c.dispor = function () { jog.forEach(function (p) { if (p.mats) Object.keys(p.mats).forEach(function (n) { p.mats[n].dispose(); }); if (p.atlas) p.atlas.tex.dispose(); }); if (box.parentNode) box.parentNode.removeChild(box); if (ro2) ro2.disconnect(); banner.classList.remove("has3d"); };
+    var t0 = performance.now();
+    c.frame = function () {
+      if (!document.body.contains(cv)) { cenaParar(); return; }
+      var t = (performance.now() - t0) / 1000; jog.forEach(function (p, k) { p.grp.rotation.y = (k ? -.38 : .38) + Math.sin(t * .8 + k * 1.7) * .09; });
+    };
+    var ro2 = null; if (window.ResizeObserver) { ro2 = new ResizeObserver(function () { if (colocar()) c.tam(); }); ro2.observe(banner); imgs.forEach(function (im) { ro2.observe(im); }); }
+    var tries = 0, go = function () {
+      if (!document.body.contains(cv)) { cenaParar(); return; }
+      if (colocar()) { c.tam(); ctl.vestir(); c.laco(); box.style.opacity = "1"; banner.classList.add("has3d"); }
+      else if (++tries < 40) setTimeout(go, 100);
+    };
+    go();
+  }, function () { box.parentNode && box.parentNode.removeChild(box); }, "pwVsMsg");
+  return ctl;
+}
+window.G94 = Object.assign(window.G94 || {}, { kitsDoJogo: kitsDoJogo, versus3D: versus3D, kitPara: kitPara, kitPadrao: kitPadrao, kitInfo: kitInfo, kitSvg: kitSvg, showClube: function () { if (CL.team != null) abrirRascunho(); mostrar(); }, clubeRecarregar: recarregar, clube: function () { return CL; }, _draft: function () { return D; }, _cena: function () { return CENA; } });
 })();

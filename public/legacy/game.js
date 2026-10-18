@@ -1878,6 +1878,7 @@ function showPrematch(base){
     if(g==="rules"){o.rules=k;PREF.rules=k}else if(g==="var")PREF.offsideVar=k==="on";else if(g==="tac"){o.tac=k;PREF.tactic=k}else if(g==="form"){o.form=k;PREF.form=k}
     else if(g==="kit")o.kit=k;else if(g==="kitR")o.kitR=k;else if(g==="stad"){PREF.stadium=k;const mm=document.querySelector(".pw-mid .muted");if(mm)mm.textContent=STADIUM_INFO[k][0]}else if(g==="time")PREF.daytime=k;else if(g==="ball")PREF.ballDesign=k;else if(g==="diff"){o.diff=k;PREF.diff=k}
     savePrefs();
+    if(g==="kit"||g==="kitR"){try{if(window.pwVs)window.pwVs.atualizar(o)}catch(e){}}
   };
   const draw=(dir)=>{
     const b=document.getElementById("pwBody");b.innerHTML=body[STEPS[step][0]]();b.dataset.dir=dir||0;b.classList.remove("in");void b.offsetWidth;b.classList.add("in");
@@ -1895,6 +1896,7 @@ function showPrematch(base){
   on("pwSkip",()=>{ac();(window.launchPre||launch)(o)});
   draw(0);
   window.scrollTo(0,0);
+  try{window.pwVs=(window.G94&&G94.versus3D)?G94.versus3D(app.querySelector(".pw-versus"),o):null}catch(e){window.pwVs=null}
 }
 
 function showHub(){
