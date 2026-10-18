@@ -99,6 +99,7 @@ function loadPrefs(){
     raw.stadium=({classic:"classico",modern:"imbondeiro",arena:"imbondeiro",aberto:"azul"})[raw.stadium]||raw.stadium;
     if(["imbondeiro","classico","azul","marcal","bairro"].includes(raw.stadium))d.stadium=raw.stadium;
     if(raw.camera==="tv"||raw.camera==="top")d.camera=raw.camera;
+    if(typeof raw.intro==="boolean")d.intro=raw.intro;
     if(typeof raw.camZoom==="number"&&raw.camZoom>=.5&&raw.camZoom<=2.5)d.camZoom=raw.camZoom;
     for(const k of ["musicVol","sfxVol","crowdVol","ballVol","refVol","uiVol"])if(typeof raw[k]==="number"&&raw[k]>=0&&raw[k]<=1)d[k]=raw[k];
     if(["auto","semba","kizomba","kuduro","off"].includes(raw.musicStyle))d.musicStyle=raw.musicStyle;
@@ -1965,6 +1966,7 @@ function showOptions(msg){
      <p class="note">Assistida: troca sozinha só quando o teu jogador fica muito longe da bola, no máximo uma vez a cada 1,2 s. Manual: só trocas com a tecla ou o botão Trocar. Em ambos os modos passas a controlar quem ganha a bola e quem vai receber o teu passe.</p></div>
    <div class="panel"><p class="panel-title">Jogo</p>
      <label class="toggle"><span>Reduzir efeitos visuais (sem tremor, câmara lenta, flashes nem animações nas bancadas)</span><input type="checkbox" id="oFx" ${PREF.reduceFx?"checked":""}></label>
+     <label class="toggle"><span>Apresentação cinematográfica: mostrar a entrada das equipas antes do jogo (Esc salta)</span><input type="checkbox" id="oIntro" ${PREF.intro!==false?"checked":""}></label>
      <label class="toggle"><span>Mostrar replay dos golos</span><input type="checkbox" id="oRep" ${PREF.replays?"checked":""}></label>
      <label class="toggle"><span>Fadiga: correr e fazer sprint cansa os jogadores (menos aceleração e mais erros)</span><input type="checkbox" id="oFat" ${PREF.fatigue!==false?"checked":""}></label>
      <label class="toggle"><span>Remate com temporização: carrega uma segunda vez no momento do contacto para rematar com mais precisão</span><input type="checkbox" id="oTim" ${PREF.shotTiming?"checked":""}></label>
@@ -1982,6 +1984,7 @@ function showOptions(msg){
   document.getElementById("oRep").onchange=e=>{PREF.replays=e.target.checked;savePrefs()};
   document.getElementById("oSnd").onchange=e=>{PREF.sound=e.target.checked;savePrefs()};
   document.getElementById("oFat").onchange=e=>{PREF.fatigue=e.target.checked;savePrefs()};
+  document.getElementById("oIntro").onchange=e=>{PREF.intro=e.target.checked;savePrefs()};
   document.getElementById("oTim").onchange=e=>{PREF.shotTiming=e.target.checked;savePrefs()};
   bindSeg("tim",k=>{PREF.timingWin=+k;savePrefs()});
   app.querySelectorAll(".keybtn").forEach(b=>b.onclick=()=>{

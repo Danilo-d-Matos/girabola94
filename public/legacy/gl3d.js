@@ -983,8 +983,17 @@ function buildScene(){
 
 /* ---------- ciclo de desenho ---------- */
 const PCAM=()=>{const p=window.__penCam;return !!(p&&p.on)};
+const CINE=()=>{const p=window.__cineCam;return !!(p&&p.on)};      // câmara cinematográfica da apresentação (intro94.js)
+window.__STADIA=STADIA;
 function setCamera(sx,sy){
   const S=R.S,cam=S.cam,L=Math.hypot(TV.back,TV.h);
+  if(CINE()){
+    const cc=window.__cineCam,asp=R.cw/Math.max(1,R.ch);
+    cam.fov=Math.max(24,Math.min(100,2*Math.atan(Math.tan((cc.hfov||64)*Math.PI/360)/asp)*180/Math.PI));cam.aspect=asp;cam.near=2;
+    cam.up.set(0,1,0);cam.position.set(cc.px,cc.py,cc.pz);cam.lookAt(new T.Vector3(cc.tx,cc.ty,cc.tz));
+    cam.updateProjectionMatrix();cam.updateMatrixWorld(true);
+    return;
+  }
   if(PCAM()){
     const pc=window.__penCam,asp=R.cw/Math.max(1,R.ch),hf=62*Math.PI/180;
     cam.fov=Math.max(36,Math.min(96,2*Math.atan(Math.tan(hf/2)/asp)*180/Math.PI));cam.aspect=asp;cam.near=4;
@@ -1070,7 +1079,7 @@ function drawGL(c,V){
   for(let i=0;i<S.trail.length;i++){const s=S.trail[i];if(i<tr.length){const a=(i+1)/tr.length;s.visible=true;s.position.set(tr[i].x,3,tr[i].y);s.material.opacity=a*.5;s.material.color.set(V.hot?(i%2?0xff5a1f:0xffb020):0xffffff);const sz=(2.5*a+.5)*.9*2;s.scale.set(sz,sz,1)}else s.visible=false}
   // marcadores no chão
   const cc=V.ctrl;
-  if(cc&&!cc.off){S.ctrlRing.visible=true;S.ctrlRing.position.set(cc.x,.15,cc.y);S.ctrlRing.material.opacity=.75}else S.ctrlRing.visible=false;
+  if(cc&&!cc.off&&!CINE()){S.ctrlRing.visible=true;S.ctrlRing.position.set(cc.x,.15,cc.y);S.ctrlRing.material.opacity=.75}else S.ctrlRing.visible=false;
   const pt=!V.replay&&G.passTarget&&!G.passTarget.off?G.passTarget:null;
   if(pt){S.passRing.visible=true;S.passRing.position.set(pt.x,.2,pt.y);S.passSpin.rotation.z=performance.now()/1500}else S.passRing.visible=false;
   if(G.tut&&G.tut.marker){const m=G.tut.marker,pl=1+Math.sin(performance.now()/180)*.12;S.tutRing.visible=S.tutFill.visible=true;S.tutRing.position.set(m.x,.15,m.y);S.tutFill.position.set(m.x,.1,m.y);S.tutRing.scale.set(pl,pl,1);S.tutFill.scale.set(pl,pl,1)}else S.tutRing.visible=S.tutFill.visible=false;
@@ -1098,7 +1107,7 @@ function overlay(c,V,sh){
    if(!PREF.reduceFx&&!dayV){c.save();c.globalCompositeOperation="lighter";const lg=c.createLinearGradient(0,0,0,VH*.5);lg.addColorStop(0,"rgba(255,244,214,.07)");lg.addColorStop(1,"rgba(255,244,214,0)");c.fillStyle=lg;c.fillRect(0,0,VW,VH*.5);c.restore()}}
   TF(c);c.translate(sh.sx,sh.sy);
   const mk=cosm("marker").c;
-  if(!PCAM()){
+  if(!PCAM()&&!CINE()){
   // seta, energia e carga do jogador controlado
   if(V.ctrl&&!V.ctrl.off){
     const p=V.ctrl,P=proj(p.x,p.y,0),s=P.s*.95,ty=P.y-33*s;
@@ -1125,10 +1134,10 @@ function overlay(c,V,sh){
   }
   c.globalAlpha=1;
   TU(c);
-  if(!PCAM())drawRadar(c,V);
+  if(!PCAM()&&!CINE())drawRadar(c,V);
   if(G.flash>0&&!PREF.reduceFx){c.fillStyle=`rgba(255,255,255,${G.flash*.5})`;c.fillRect(0,0,VW,VH)}
   if(V.replay){c.fillStyle="rgba(0,0,0,.55)";c.fillRect(0,0,VW,26);c.fillRect(0,VH-26,VW,26);c.font='700 22px Rajdhani,"Arial Narrow",sans-serif';c.textAlign="left";c.textBaseline="middle";c.fillStyle=FRAME%60<40?"#d7263d":"#7a1220";c.beginPath();c.arc(30,13,6,0,Math.PI*2);c.fill();c.fillStyle="#fff";c.fillText("REPLAY",44,14)}
-  drawMsg(c);
+  if(!CINE())drawMsg(c);
 }
 
 /* ---------- ligação ao jogo ---------- */
