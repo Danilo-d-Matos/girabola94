@@ -651,7 +651,9 @@ function playerVariant(look){
   const tone=TONES[Math.floor(Math.pow(r(),1.15)*TONES.length)];
   const hair=look.ref?"fade":pickWeighted(r,[["short",24],["fade",20],["afro",12],["braids",8],["bald",8],["band",6],["mohawk",5],["flat",7],["curly",10]]);
   const beard=look.ref?null:pickWeighted(r,[[null,70],["stubble",12],["full",14],["goatee",4]]);
-  return{tone,hair,beard,hairCol:HAIRC[Math.floor(r()*HAIRC.length)]};
+  // proporções: altura, corpulência e tamanho da cabeça (silhuetas diferentes sem mudar o jogo)
+  const rr=()=>r()+r()-1;
+  return{tone,hair,beard,hairCol:HAIRC[Math.floor(r()*HAIRC.length)],hgt:look.ref?1:look.gk?1.03+rr()*.03:1+rr()*.045,bld:look.ref?1:.97+rr()*.08+(look.gk?.03:0),head:.95+r()*.12};
 }
 const HG={};
 function hgeo(k,fn){return HG[k]||(HG[k]=fn())}
@@ -687,6 +689,7 @@ function buildHair(h,v,look){
 function glbVariation(h,look,set){
   const v=playerVariant(look),m=h.gl.meshes;
   for(const part of ["Cabeca","Bracos","Pernas"])if(m[part]&&set[part])m[part].material=skinMat(set[part],v.tone);
+  h.gl.vr={hgt:v.hgt,bld:v.bld,head:v.head};
   buildHair(h,v,look);
 }
 function glbLook(h,look){
@@ -800,6 +803,7 @@ function poseGlb(h,o,dt,time){
   if(!o.slide)g.slideT=0;
   if(a&&sync!=null){a.paused=true;a.time=Math.max(0,sync)}else if(a)a.paused=false;
   g.mixer.update(dt);
+  if(g.vr){h.root.scale.set(g.vr.bld,g.vr.hgt,g.vr.bld);if(g.bones.Head)g.bones.Head.scale.setScalar(g.vr.head)}
   // cabeça acompanha a bola
   const head=g.bones.Head;
   if(head&&o.lookX!=null&&spd<2.2&&!o.dive&&!o.down){
