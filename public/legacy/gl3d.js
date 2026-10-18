@@ -566,7 +566,19 @@ function clothBump(){
   try{t.anisotropy=Math.min(8,R.gl.capabilities.getMaxAnisotropy())}catch(e){}
   return GLBM.clothTex=t;
 }
-function clothify(m,s){if(!m)return m;m.bumpMap=clothBump();m.bumpScale=s==null?1.1:s;m.needsUpdate=true;return m}
+/* malha de tecido real (mapa de normais de camisola e de calções, recortado e tornado contínuo) por cima do relevo geral */
+function clothNormal(kind){
+  const k="mn_"+kind;if(GLBM.tex[k])return GLBM.tex[k];
+  const t=new T.TextureLoader().load("modelos/tecido/malha_"+kind+"_n.png",function(){(GLBM.tex[k].userData.mats||[]).forEach(m=>{m.needsUpdate=true})});
+  t.wrapS=t.wrapT=T.RepeatWrapping;t.flipY=false;t.colorSpace=T.NoColorSpace;t.minFilter=T.LinearMipmapLinearFilter;t.generateMipmaps=true;
+  t.repeat.set(kind==="camisola"?16:22,kind==="camisola"?8:11);t.userData.mats=[];
+  try{t.anisotropy=Math.min(8,R.gl.capabilities.getMaxAnisotropy())}catch(e){}
+  return GLBM.tex[k]=t;
+}
+function clothify(m,s,kind){
+  if(!m)return m;m.bumpMap=clothBump();m.bumpScale=s==null?1.1:s;
+  if(kind){const n=clothNormal(kind);m.normalMap=n;m.normalScale=new T.Vector2(.55,.55);n.userData.mats.push(m)}
+  m.needsUpdate=true;return m}
 function satin(m){
   const n=new T.MeshPhongMaterial({color:m.color?m.color.clone():new T.Color(0xffffff),emissive:0x141414,specular:0x8c8c8c,shininess:62});
   n.map=m.map||null;return n;
@@ -575,8 +587,8 @@ function glbMatSet(look){
   const s=glbMatSet0(look);
   if(!s.__cloth){
     s.__cloth=1;
-    if(look.gk&&!look.ref){s.Camisola=clothify(satin(s.Camisola),.9);s.Calcoes=clothify(satin(s.Calcoes),.7);s.Meias=clothify(s.Meias,.6)}
-    else{clothify(s.Camisola,1.1);clothify(s.Calcoes,.8);clothify(s.Meias,.6)}
+    if(look.gk&&!look.ref){s.Camisola=clothify(satin(s.Camisola),.9,"camisola");s.Calcoes=clothify(satin(s.Calcoes),.7,"calcoes");s.Meias=clothify(s.Meias,.6,"calcoes")}
+    else{clothify(s.Camisola,1.1,"camisola");clothify(s.Calcoes,.8,"calcoes");clothify(s.Meias,.6,"calcoes")}
   }
   return s;
 }

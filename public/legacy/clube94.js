@@ -668,7 +668,7 @@ function versus3D(banner, o) {
       var t = TEAMS[idx], id = GL.team[t.s] || "petro_luanda";
       GL.look(p.h, { code: t.s, kit: { custom: false }, num: 10 });
       if (k.custom) {
-        if (!p.atlas || p.id !== id) { p.id = id; p.atlas = GL.atlas(id); p.mats = {}; ["Cabeca", "Bracos", "Camisola", "Calcoes", "Pernas", "Meias", "Chuteiras"].forEach(function (n) { p.mats[n] = new T3.MeshLambertMaterial({ map: p.atlas.tex, emissive: 0x1a1a1a }); }); GL.cloth(p.mats.Camisola, 1.1); GL.cloth(p.mats.Calcoes, .8); GL.cloth(p.mats.Meias, .6); }
+        if (!p.atlas || p.id !== id) { p.id = id; p.atlas = GL.atlas(id); p.mats = {}; ["Cabeca", "Bracos", "Camisola", "Calcoes", "Pernas", "Meias", "Chuteiras"].forEach(function (n) { p.mats[n] = new T3.MeshLambertMaterial({ map: p.atlas.tex, emissive: 0x1a1a1a }); }); GL.cloth(p.mats.Camisola, 1.1, "camisola"); GL.cloth(p.mats.Calcoes, .8, "calcoes"); GL.cloth(p.mats.Meias, .6, "calcoes"); }
         for (var n in p.mats) if (p.h.gl.meshes[n]) p.h.gl.meshes[n].material = p.mats[n];
         p.atlas.paint({ shirt: k.shirt, accent: k.accent, shorts: k.shorts, socks: k.socks, pattern: k.pattern | 0, custom: true });
       }
