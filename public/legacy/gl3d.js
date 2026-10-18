@@ -576,7 +576,7 @@ function clothNormal(kind){
   return GLBM.tex[k]=t;
 }
 function clothify(m,s,kind){
-  if(!m)return m;m.bumpMap=clothBump();m.bumpScale=s==null?1.1:s;
+  if(!m)return m;m.polygonOffset=true;m.polygonOffsetFactor=-2;m.polygonOffsetUnits=-2;m.polygonOffset=true;m.polygonOffsetFactor=-2;m.polygonOffsetUnits=-2;m.polygonOffset=true;m.polygonOffsetFactor=-2;m.polygonOffsetUnits=-2;m.bumpMap=clothBump();m.bumpScale=s==null?1.1:s;
   if(kind){const n=clothNormal(kind);m.normalMap=n;m.normalScale=new T.Vector2(.55,.55);n.userData.mats.push(m)}
   m.needsUpdate=true;return m}
 function satin(m){
@@ -638,58 +638,127 @@ function glbNumber(h,look){
   g.numMat.map=glbNumTex(id);g.numMat.needsUpdate=true;
   g.numMat.userData.off.set((n%10)*.1,Math.floor(n/10)*.1);
 }
-/* ---------- variedade de jogadores: tom de pele, cabelo e barba ----------
-   A cabeça do modelo traz o mesmo rosto e cabelo pintados para todos; aqui cada jogador recebe (de forma determinista, a partir do nome e número)
-   um tom de pele próprio (cor multiplicada na cabeça, braços e pernas), um penteado e, por vezes, barba, em geometria própria sobre a cabeça. */
-const TONES=["#3d261a","#47291c","#573523","#684229","#7a5235","#8a5a3b","#9d6842","#b27b50"],SKIN_BASE=[90,56,37];
-const HAIRC=["#0d0b0a","#0d0d0d","#14100c","#14100c","#1e150f","#2b1d12","#3a2616"];
+/* ---------- elenco angolano: variedade de jogadores ----------
+   O modelo traz o mesmo rosto pintado para todos. Cada jogador recebe, de forma determinista (nome + número + clube):
+   - tom de pele: 95% negros (castanho médio a muito escuro, vários subtons) e 5% brancos (4 tons);
+   - forma do rosto: a malha da cabeça é deformada por jogador (maxilar, queixo, nariz, lábios, maçãs do rosto, sobrancelhas);
+   - cabelo (10 estilos), sobrancelhas, barba (rala, cheia, pera, bigode) e idade aparente (cabelo/barba grisalhos nos mais velhos);
+   - altura, corpulência e tamanho da cabeça ligeiramente diferentes. */
+const TONES_PRETO=["#2c1a12","#34201a","#3d261a","#47291c","#573523","#5f3a25","#684229","#774b30","#8a5a3b"];
+const TONES_BRANCO=["#d3a081","#dcab8d","#e5b79b","#c58f6e"];
+const HAIRC_PRETO=["#0d0b0a","#0d0d0d","#14100c","#14100c","#1e150f","#2b1d12","#3a2616"];
+const HAIRC_BRANCO=["#14100c","#2b1d12","#3a2616","#5a3d22","#8a6a3a","#c9a463","#8a3f1d"];
+const SKIN_BASE=[90,56,37];
 function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function rngSeed(s){let a=s>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
 function pickWeighted(r,list){let t=0;for(const e of list)t+=e[1];let x=r()*t;for(const e of list){x-=e[1];if(x<=0)return e[0]}return list[0][0]}
+/* quota exata de 5% de jogadores brancos no conjunto dos plantéis: ordena todos os atletas por um hash estável e marca os primeiros */
+let _brancos=null;
+function eBranco(name,num,code){
+  if(!_brancos){
+    _brancos=new Set();
+    try{const all=[];for(const club in SQUADS){const t=TEAMS.find(x=>x.n===club),c=t&&t.s;for(const a of SQUADS[club])all.push({k:[a.name,a.num,c].join("|"),h:hashStr(a.fullName+"|"+club+"#b")})}
+      all.sort((x,y)=>x.h-y.h);const n=Math.round(all.length*.05);for(let i=0;i<n;i++)_brancos.add(all[i].k)}catch(e){}
+  }
+  return _brancos.has([name,num,code].join("|"));
+}
 function playerVariant(look){
-  const r=rngSeed(hashStr([look.name||"",look.num||0,look.code||"",look.gk?"g":"",look.ref?"r":""].join("|")));
-  const tone=TONES[Math.floor(Math.pow(r(),1.15)*TONES.length)];
-  const hair=look.ref?"fade":pickWeighted(r,[["short",24],["fade",20],["afro",12],["braids",8],["bald",8],["band",6],["mohawk",5],["flat",7],["curly",10]]);
-  const beard=look.ref?null:pickWeighted(r,[[null,70],["stubble",12],["full",14],["goatee",4]]);
-  // proporções: altura, corpulência e tamanho da cabeça (silhuetas diferentes sem mudar o jogo)
-  const rr=()=>r()+r()-1;
-  return{tone,hair,beard,hairCol:HAIRC[Math.floor(r()*HAIRC.length)],hgt:look.ref?1:look.gk?1.03+rr()*.03:1+rr()*.045,bld:look.ref?1:.97+rr()*.08+(look.gk?.03:0),head:.95+r()*.12};
+  const seed=hashStr([look.name||"",look.num||0,look.code||"",look.gk?"g":"",look.ref?"r":""].join("|")),r=rngSeed(seed);
+  const rr=()=>r()+r()-1,gauss=()=>(r()+r()+r()+r()-2)*1.15;
+  const branco=!look.ref&&(_brancos&&_brancos.size?_brancos.has([look.name,look.num,look.code].join("|")):eBranco(look.name,look.num,look.code));      // 5% brancos (quota exata)
+  const tone=branco?TONES_BRANCO[Math.floor(r()*TONES_BRANCO.length)]:TONES_PRETO[Math.floor(Math.pow(r(),1.1)*TONES_PRETO.length)];
+  const velho=!look.ref&&r()<.11;                                  // jogadores mais experientes
+  const hair=look.ref?"fade":pickWeighted(r,branco?[["short",34],["fade",20],["curly",12],["flat",6],["band",6],["mohawk",3],["bald",8],["riscado",11]]:[["short",18],["fade",18],["afro",12],["braids",8],["bald",8],["band",5],["mohawk",4],["flat",6],["curly",10],["riscado",11]]);
+  const beard=look.ref?null:pickWeighted(r,[[null,52],["stubble",14],["full",14],["goatee",6],["mustache",8],["mustache+goatee",6]]);
+  let hairCol=(branco?HAIRC_BRANCO:HAIRC_PRETO)[Math.floor(r()*(branco?HAIRC_BRANCO:HAIRC_PRETO).length)];
+  if(velho)hairCol=r()<.5?"#6f6f6f":"#a9a9a9";
+  const face={fw:gauss()*.05,jaw:gauss()*.09,chin:gauss()*.08,chinY:gauss()*.07,nose:gauss()*.1,noseW:gauss()*.08,noseL:gauss()*.06,lips:gauss()*.08,cheek:gauss()*.07,brow:gauss()*.08};
+  const brow=pickWeighted(r,[["normal",40],["grossa",25],["fina",20],["arqueada",15]]);
+  return{branco,velho,tone,hair,beard,hairCol,face,brow,
+    hgt:look.ref?1:look.gk?1.03+rr()*.03:1+rr()*.045,bld:look.ref?1:.97+rr()*.08+(look.gk?.03:0),head:.95+r()*.12};
 }
 const HG={};
 function hgeo(k,fn){return HG[k]||(HG[k]=fn())}
 const _hm={};function hmat(c,e){const k=c+"|"+(e||0);return _hm[k]||(_hm[k]=new T.MeshLambertMaterial({color:c,emissive:e==null?0x0a0a0a:e}))}
 function hmesh(geo,mat,x,y,z,sx,sy,sz,rx){const m=new T.Mesh(geo,mat);m.position.set(x,y,z);if(sx!=null)m.scale.set(sx,sy,sz);if(rx)m.rotation.x=rx;m.castShadow=false;m.frustumCulled=false;return m}
-function skinTint(hex){const c=new T.Color(hex);return new T.Color(Math.min(1.9,Math.max(.5,c.r*255/SKIN_BASE[0])),Math.min(1.9,Math.max(.5,c.g*255/SKIN_BASE[1])),Math.min(1.9,Math.max(.5,c.b*255/SKIN_BASE[2])))}
+function skinTint(hex){const c=new T.Color(hex);return new T.Color(Math.min(4.4,Math.max(.45,c.r*255/SKIN_BASE[0])),Math.min(4.4,Math.max(.45,c.g*255/SKIN_BASE[1])),Math.min(4.4,Math.max(.45,c.b*255/SKIN_BASE[2])))}
 const _sk={};
-function skinMat(base,hex){const k=base.uuid+"|"+hex;if(_sk[k])return _sk[k];const m=base.clone();m.color.copy(skinTint(hex));const u=base.map&&base.map.userData;if(u&&u.ready===false){m.visible=false;(u.mats=u.mats||[]).push(m)}else m.visible=true;return _sk[k]=m}
-/* cabelo e barba em unidades do mundo, no referencial do osso da cabeça (origem na base do crânio, y para cima, z para a frente) */
+function skinMat(base,hex){const k=base.uuid+"|"+hex;if(_sk[k])return _sk[k];const m=base.clone();m.color.set(0xffffff);
+  const tc=new T.Color(hex),tone="vec3("+tc.r.toFixed(4)+","+tc.g.toFixed(4)+","+tc.b.toFixed(4)+")";
+  m.onBeforeCompile=function(sh){sh.fragmentShader=sh.fragmentShader.replace("#include <map_fragment>","#include <map_fragment>\n#ifdef USE_MAP\n{float lu=dot(diffuseColor.rgb,vec3(.299,.587,.114));vec3 ch=diffuseColor.rgb/(lu+.0001);float sk=(1.0-smoothstep(.14,.5,length(ch-vec3(1.34,.84,.55))))*smoothstep(.035,.09,lu);float rt=lu/.2635;vec3 tgt="+tone+"*(rt/(1.0+.4*max(rt-1.0,.0)));diffuseColor.rgb=mix(diffuseColor.rgb,tgt,sk);}\n#endif")};
+  m.customProgramCacheKey=function(){return"skin"+hex};const u=base.map&&base.map.userData;if(u&&u.ready===false){m.visible=false;(u.mats=u.mats||[]).push(m)}else m.visible=true;return _sk[k]=m}
+/* cabelo, sobrancelhas e barba em unidades do mundo, no referencial do osso da cabeça (origem junto ao maxilar, y para cima, z para a frente) */
 function buildHair(h,v,look){
   const g=h.gl,bone=g.bones&&g.bones.Head;if(!bone)return;
   if(!g.hair){g.hair=new T.Group();g.hair.scale.setScalar(1/GLBM.scale);bone.add(g.hair)}
   const gr=g.hair;while(gr.children.length)gr.remove(gr.children[0]);
   const hm=hmat(v.hairCol),cap=(r,th,y,z,rx,sy)=>hmesh(hgeo("cap"+r+"_"+th,()=>new T.SphereGeometry(r,18,12,0,Math.PI*2,0,th)),hm,0,y,z,.92,sy||1.02,.97,rx);
+  const skinC=skinTint(v.tone).clone().multiply(new T.Color(.353,.220,.145)).multiplyScalar(1.1);
   switch(v.hair){
     case"short":gr.add(cap(1.86,1.35,1.5,-.12,-.45));break;
     case"fade":gr.add(cap(1.8,1.25,1.52,-.08,-.4));break;
-    case"bald":{const sm=new T.MeshLambertMaterial({color:skinTint(v.tone).clone().multiply(new T.Color(.353,.220,.145)).multiplyScalar(1.12),emissive:0x0a0a0a});gr.add(hmesh(hgeo("cap1.82_1.3",()=>new T.SphereGeometry(1.82,18,12,0,Math.PI*2,0,1.3)),sm,0,1.5,-.1,.92,1.02,.97,-.4));break}
+    case"bald":gr.add(hmesh(hgeo("cap1.82_1.3",()=>new T.SphereGeometry(1.82,18,12,0,Math.PI*2,0,1.3)),new T.MeshLambertMaterial({color:skinC,emissive:0x0a0a0a}),0,1.5,-.1,.92,1.02,.97,-.4));break;
     case"afro":gr.add(hmesh(hgeo("afro",()=>new T.SphereGeometry(2.4,18,14)),hm,0,2.95,-.5,1,.92,.88));break;
     case"curly":gr.add(hmesh(hgeo("curly",()=>new T.SphereGeometry(2.0,18,14)),hm,0,2.7,-.25,1,.88,.92));break;
     case"flat":gr.add(cap(1.86,1.35,1.5,-.12,-.45));gr.add(hmesh(hgeo("flat",()=>new T.BoxGeometry(2.9,1.1,2.6)),hm,0,3.65,-.3));break;
     case"mohawk":gr.add(cap(1.8,1.25,1.52,-.08,-.4));gr.add(hmesh(hgeo("moh",()=>new T.SphereGeometry(1,12,10)),hm,0,3.45,-.25,.34,1.1,1.7));break;
+    case"riscado":{gr.add(cap(1.8,1.25,1.52,-.08,-.4));const sm=new T.MeshLambertMaterial({color:skinC,emissive:0x0a0a0a}),st=hgeo("risco",()=>new T.BoxGeometry(.16,.16,1.3));[[-1.15,2.55],[-1.28,2.2],[1.15,2.55]].forEach(function(p,i){const b=hmesh(st,sm,p[0],p[1],.35,1,1,1);b.rotation.x=-.35;b.rotation.z=(p[0]<0?.35:-.35);gr.add(b)});break}
     case"braids":{gr.add(cap(1.86,1.35,1.5,-.12,-.45));const bg=hgeo("braid",()=>new T.CylinderGeometry(.2,.14,2.6,6));[-1.3,-.78,-.26,.26,.78,1.3].forEach((x,i)=>{const b=hmesh(bg,hm,x*.95,.9,-1.2+Math.abs(x)*.1);b.rotation.x=.1;gr.add(b)});break}
     case"band":{gr.add(cap(1.86,1.35,1.5,-.12,-.45));const tc=look.kit&&(look.kit.trim||look.kit.accent)||"#ffffff";const band=new T.Mesh(hgeo("band",()=>new T.TorusGeometry(1.88,.28,6,22)),new T.MeshLambertMaterial({color:tc,emissive:0x101010}));band.rotation.x=Math.PI/2-.12;band.position.set(0,2.5,-.08);band.scale.set(.88,.88,1);band.castShadow=false;gr.add(band);break}
   }
-  if(v.beard){
-    const bm=hmat(v.hairCol);
-    if(v.beard==="full")gr.add(hmesh(hgeo("beardF",()=>new T.SphereGeometry(1,22,10,.1,Math.PI-.2,1.5,Math.PI-1.5)),bm,0,.15,.5,1.46,.88,.9));
-    else if(v.beard==="stubble")gr.add(hmesh(hgeo("beardS",()=>new T.SphereGeometry(1,22,10,.1,Math.PI-.2,1.65,Math.PI-1.65)),hmat(v.hairCol,0x050505),0,.15,.5,1.43,.8,.86));
-    else if(v.beard==="goatee")gr.add(hmesh(hgeo("goat",()=>new T.SphereGeometry(.5,10,8)),bm,0,-.28,1.2,1,1.2,.7));
+  // sobrancelhas
+  if(!look.ref){
+    const bmat=hmat(v.hairCol==="#a9a9a9"||v.hairCol==="#6f6f6f"?"#5a5a5a":v.hairCol),dims={normal:[.62,.1],grossa:[.66,.16],fina:[.6,.06],arqueada:[.6,.09]}[v.brow]||[.62,.1],bg=hgeo("sob_"+v.brow,()=>new T.BoxGeometry(dims[0],dims[1],.12));
+    [-1,1].forEach(function(sd){const b=hmesh(bg,bmat,sd*.58,1.88,1.27);b.rotation.z=sd*(v.brow==="arqueada"?-.28:-.1);b.rotation.x=-.12;gr.add(b)});
   }
+  if(v.beard){
+    const bc=v.hairCol,bm=hmat(bc),b=v.beard;
+    if(b==="full")gr.add(hmesh(hgeo("beardF",()=>new T.SphereGeometry(1,22,10,.1,Math.PI-.2,1.5,Math.PI-1.5)),bm,0,.15,.5,1.46,.88,.9));
+    else if(b==="stubble")gr.add(hmesh(hgeo("beardS",()=>new T.SphereGeometry(1,22,10,.1,Math.PI-.2,1.65,Math.PI-1.65)),hmat(bc,0x050505),0,.15,.5,1.43,.8,.86));
+    if(b==="goatee"||b==="mustache+goatee")gr.add(hmesh(hgeo("goat",()=>new T.SphereGeometry(.5,10,8)),bm,0,-.28,1.2,1,1.2,.7));
+    if(b==="mustache"||b==="mustache+goatee")gr.add(hmesh(hgeo("mustache",()=>new T.BoxGeometry(1.15,.18,.22)),bm,0,.56,1.56,1,1,1,-.05));
+  }
+}
+/* deformação da malha da cabeça: coordenadas locais da cabeça (unidades do mundo), calculadas uma vez na pose de repouso */
+function prepHeadMorph(h){
+  const g=h.gl,mesh=g.meshes.Cabeca,bone=g.bones.Head;if(!mesh||!bone||g.hm)return;
+  h.root.updateMatrixWorld(true);if(mesh.skeleton)mesh.skeleton.update();
+  // nova geometria que partilha os atributos (incl. pesos do esqueleto, que vêm intercalados) e só copia as posições
+  {const og=mesh.geometry,geo=new T.BufferGeometry();for(const k in og.attributes)geo.setAttribute(k,og.attributes[k]);if(og.index)geo.setIndex(og.index);og.groups.forEach(gg=>geo.addGroup(gg.start,gg.count,gg.materialIndex));
+   const pa=og.attributes.position,arr=new Float32Array(pa.count*3);for(let i=0;i<pa.count;i++){arr[i*3]=pa.getX(i);arr[i*3+1]=pa.getY(i);arr[i*3+2]=pa.getZ(i)}
+   geo.setAttribute("position",new T.BufferAttribute(arr,3));mesh.geometry=geo}
+  const pos=mesh.geometry.attributes.position,orig=pos.array.slice(),n=pos.count,loc=new Float32Array(n*3),inv=new T.Matrix4().copy(bone.matrixWorld).invert(),v=new T.Vector3(),sc=GLBM.scale;
+  for(let i=0;i<n;i++){mesh.getVertexPosition(i,v);v.applyMatrix4(mesh.matrixWorld).applyMatrix4(inv);loc[i*3]=v.x*sc;loc[i*3+1]=v.y*sc;loc[i*3+2]=v.z*sc}
+  const A=new T.Matrix4().copy(inv).multiply(mesh.matrixWorld);A.premultiply(new T.Matrix4().makeScale(sc,sc,sc));
+  const Ai=A.clone().invert(),M3=new T.Matrix3().setFromMatrix4(Ai);
+  g.hm={mesh,pos,orig,loc,n,M3};
+}
+function applyHeadMorph(h,f){
+  const m=h.gl.hm;if(!m)return;
+  const gs=(y,c,s)=>Math.exp(-((y-c)/s)*((y-c)/s)),sm=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
+  const d=new T.Vector3(),arr=m.pos.array;
+  for(let i=0;i<m.n;i++){
+    const x=m.loc[i*3],y=m.loc[i*3+1],z=m.loc[i*3+2];
+    let dx=0,dy=0,dz=0;
+    const front=sm(-.3,.9,z),face=sm(-.7,-.1,y)*front,ax=Math.abs(x);
+    dx+=x*f.fw*face;                                                             // largura geral do rosto
+    dx+=x*f.jaw*gs(y,-.1,.55)*front;                                             // largura do maxilar
+    dz+=f.chin*gs(y,-.3,.4)*front;dy+=f.chinY*gs(y,-.35,.3)*front;                // queixo: saliência e comprimento
+    dz+=f.nose*gs(y,.95,.4)*gs(x,0,.55)*front;dx+=x*f.noseW*gs(y,.8,.3)*gs(x,0,.6)*front;dy+=f.noseL*gs(y,.8,.4)*gs(x,0,.5)*front;   // nariz
+    dz+=f.lips*gs(y,.35,.25)*gs(x,0,.7)*front;                                    // lábios
+    dx+=x*f.cheek*gs(y,1.0,.45)*sm(.5,1.2,ax)*front;dz+=f.cheek*.5*gs(y,1.0,.4)*sm(.4,1.1,ax)*front;   // maçãs do rosto
+    dz+=f.brow*gs(y,1.85,.3)*front;                                               // arcada
+    d.set(dx,dy,dz).applyMatrix3(m.M3);
+    arr[i*3]=m.orig[i*3]+d.x;arr[i*3+1]=m.orig[i*3+1]+d.y;arr[i*3+2]=m.orig[i*3+2]+d.z;
+  }
+  m.pos.needsUpdate=true;try{m.mesh.geometry.computeVertexNormals()}catch(e){}
 }
 function glbVariation(h,look,set){
   const v=playerVariant(look),m=h.gl.meshes;
   for(const part of ["Cabeca","Bracos","Pernas"])if(m[part]&&set[part])m[part].material=skinMat(set[part],v.tone);
-  h.gl.vr={hgt:v.hgt,bld:v.bld,head:v.head};
+  if(!h.gl.hm&&!h.gl.hmTried){h.gl.hmTried=1;try{prepHeadMorph(h)}catch(e){console.warn("Forma do rosto:",e&&e.message)}}
+  applyHeadMorph(h,v.face);
+  h.gl.vr={hgt:v.hgt,bld:v.bld,head:v.head};h.gl.var=v;
   buildHair(h,v,look);
 }
 function glbLook(h,look){
@@ -698,7 +767,7 @@ function glbLook(h,look){
   try{glbVariation(h,look,set)}catch(e){if(!h.varErr){h.varErr=1;console.warn("Variedade:",e&&e.message)}}
   glbNumber(h,look);
 }
-window.__glb={load:glbLoad,look:glbLook,atlas:makeKitAtlas,pat:kitPatDraw,team:GLBM.TEAM,cloth:clothify};
+window.__glb={load:glbLoad,look:glbLook,atlas:makeKitAtlas,pat:kitPatDraw,team:GLBM.TEAM,cloth:clothify,variant:playerVariant};
 const GL_LOOP=new Set(["Idle_Respirar","Idle_Atento","Andar","Correr","Sprint","Correr_Tras","Passo_Lateral","Conducao_Bola"]);
 function glAct(h,name){
   const g=h.gl;if(g.act[name])return g.act[name];
