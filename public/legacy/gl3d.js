@@ -615,6 +615,71 @@ function glPlay(h,name,opt){
   }
   return a;
 }
+/* IK de dois ossos (anca/ombro → joelho/cotovelo → tornozelo/mão), sobre a pose já calculada pelo misturador de animações */
+const _H=new T.Vector3(),_K=new T.Vector3(),_A=new T.Vector3(),_T=new T.Vector3(),_D=new T.Vector3(),_P=new T.Vector3(),_K2=new T.Vector3(),_Kn=new T.Vector3(),_An=new T.Vector3(),_a=new T.Vector3(),_b=new T.Vector3();
+const _q=new T.Quaternion(),_wq=new T.Quaternion(),_pq=new T.Quaternion();
+function boneToward(bone,pivot,cur,want){
+  _a.copy(cur).sub(pivot);_b.copy(want).sub(pivot);if(_a.lengthSq()<1e-8||_b.lengthSq()<1e-8)return;
+  _q.setFromUnitVectors(_a.normalize(),_b.normalize());
+  bone.getWorldQuaternion(_wq);_wq.premultiply(_q);
+  bone.parent.getWorldQuaternion(_pq);_pq.invert();bone.quaternion.copy(_pq.multiply(_wq));
+  bone.updateMatrixWorld(true);
+}
+function ik2(up,mid,end,target,pole,w){
+  if(w<.01)return;
+  up.getWorldPosition(_H);mid.getWorldPosition(_K);end.getWorldPosition(_A);
+  const l1=_H.distanceTo(_K),l2=_K.distanceTo(_A);
+  _T.copy(_A).lerp(target,w);
+  _D.copy(_T).sub(_H);let d=_D.length();if(d<1e-4)return;_D.divideScalar(d);
+  d=Math.min(l1+l2-.02,Math.max(Math.abs(l1-l2)+.05,d));_T.copy(_H).addScaledVector(_D,d);
+  const a=(l1*l1-l2*l2+d*d)/(2*d),hh=Math.sqrt(Math.max(0,l1*l1-a*a));
+  _P.copy(pole).addScaledVector(_D,-pole.dot(_D));if(_P.lengthSq()<1e-6)return;_P.normalize();
+  _K2.copy(_H).addScaledVector(_D,a).addScaledVector(_P,hh);
+  boneToward(up,_H,_K,_K2);
+  mid.getWorldPosition(_Kn);end.getWorldPosition(_An);
+  boneToward(mid,_Kn,_An,_T);
+}
+const _tg=new T.Vector3(),_pl=new T.Vector3(),_pf=new T.Vector3();
+/* o pé da frente vai à bola em cada passada do portador (a bola fica à ponta da chuteira); o guarda-redes segura a bola com as duas mãos */
+function ballContact(h,o,dt){
+  const g=h.gl,B=g.bones;if(!B||!B.LeftUpLeg||!B.LeftHand)return;
+  const ik=h.ik||(h.ik={L:0,R:0,A:0});
+  const ok=o.bx!=null&&!o.dive&&!(o.jump>0)&&!o.down&&!o.slide&&!o.celebrate&&!o.throwIn&&!(o.kick>0);
+  const foot=ok&&o.hasBall&&!o.gk&&!o.hold&&o.spd>.12;
+  const hands=ok&&o.hold;
+  const kickIK=o.kick>0&&o.kp!=null&&o.kp<.3&&o.kx!=null&&!o.slide&&!o.dive&&!o.down&&!o.throwIn&&!o.celebrate;
+  const k=Math.min(1,dt*13);
+  if(!kickIK&&!foot&&ik.L<.01&&ik.R<.01&&!hands&&ik.A<.01)return;
+  h.root.updateMatrixWorld(true);
+  let lead=null;
+  if(foot){
+    B.LeftFoot.getWorldPosition(_A);const fl=(_A.x-o.x)*o.fx+(_A.z-o.y)*o.fy;
+    B.RightFoot.getWorldPosition(_A);const fr=(_A.x-o.x)*o.fx+(_A.z-o.y)*o.fy;
+    lead=fl>=fr?"L":"R";
+  }
+  ik.L+=((lead==="L"?1:0)-ik.L)*k;ik.R+=((lead==="R"?1:0)-ik.R)*k;ik.A+=((hands?1:0)-ik.A)*k;
+  const fx=o.fx,fy=o.fy;
+  if(kickIK){
+    const w=1-o.kp/.3;      // máximo no instante do chuto, desvanece em 0,2 s
+    _tg.set(o.kx-fx*(3.7+BALL_R*.55),Math.max(3.2,o.kz+BALL_R*.8),o.ky-fy*(3.7+BALL_R*.55));_pl.set(fx,.15,fy);
+    ik2(B.RightUpLeg,B.RightLeg,B.RightFoot,_tg,_pl,w*w*(3-2*w));
+  }
+  if(ik.L>.01||ik.R>.01){
+    // tornozelo: atrás do centro da bola (comprimento do pé + raio), à altura do chão
+    _tg.set(o.bx-fx*(3.7+BALL_R*.55),Math.max(3.2,o.bz+BALL_R*.8),o.by-fy*(3.7+BALL_R*.55));
+    _pl.set(fx,.15,fy);
+    if(ik.L>.01)ik2(B.LeftUpLeg,B.LeftLeg,B.LeftFoot,_tg,_pl,ik.L);
+    if(ik.R>.01)ik2(B.RightUpLeg,B.RightLeg,B.RightFoot,_tg,_pl,ik.R);
+  }
+  if(ik.A>.01&&o.hold){
+    const lx=fy,lz=-fx;                                     // lateral (perpendicular à direção)
+    for(const sd of [1,-1]){
+      _tg.set(o.hold.x+lx*sd*(BALL_R+.5),o.hold.z-.2,o.hold.y+lz*sd*(BALL_R+.5));
+      _pl.set(lx*sd*.9,-.7,lz*sd*.9);
+      sd>0?ik2(B.LeftArm,B.LeftForeArm,B.LeftHand,_tg,_pl,ik.A):ik2(B.RightArm,B.RightForeArm,B.RightHand,_tg,_pl,ik.A);
+    }
+  }
+}
 function poseGlb(h,o,dt,time){
   const g=h.gl,tgt=Math.atan2(o.fx,o.fy);
   h.yaw=h.yaw==null?tgt:lerpAng(h.yaw,tgt,1-Math.exp(-dt*(o.slide?4:o.spd>1.4?9:12)));
@@ -628,7 +693,7 @@ function poseGlb(h,o,dt,time){
   else if(o.celebrate){a=glPlay(h,"Celebracao",{fade:.12})}
   else if(o.throwIn){const nm="Lancamento_Lateral",d=GLBM.clips[nm].duration;a=glPlay(h,nm,{fade:.1});sync=o.kick>0?d*(.4+.55*(1-Math.min(1,o.kick/.65))):d*.4}
   else if(o.slide){a=glPlay(h,"Carrinho",{fade:.06});if(!g.slideT)g.slideT=0;g.slideT+=dt;sync=Math.min(GLBM.clips.Carrinho.duration-.02,g.slideT*2.4)}
-  else if(o.kick>0){const nm=o.kickType==="shot"?"Remate":"Passe";a=glPlay(h,nm,{fade:.06});const d=GLBM.clips[nm].duration,p=1-Math.min(1,o.kick/.65);sync=Math.min(d-.02,p*d*.8)}
+  else if(o.kick>0){const nm=o.kickType==="shot"?"Remate":"Passe";a=glPlay(h,nm,{fade:.06});const d=GLBM.clips[nm].duration,p=1-Math.min(1,o.kick/.65),tc=nm==="Remate"?.62:.58;sync=Math.min(d-.02,tc+p*(d-tc)*.9);o.kp=p}
   else if(spd<.12){a=glPlay(h,o.gk&&Math.abs(lat)>.05?"Passo_Lateral":g.idle);if(a)a.timeScale=1}
   else if(o.gk&&Math.abs(lat)>Math.abs(fw)){a=glPlay(h,"Passo_Lateral");if(a)a.timeScale=Math.max(.5,Math.min(1.6,spd/1.2))}
   else if(o.sprint&&spd>1.6){a=glPlay(h,"Sprint");if(a)a.timeScale=Math.max(.7,Math.min(1.5,spd/2.7))}
@@ -643,6 +708,7 @@ function poseGlb(h,o,dt,time){
     const la=Math.atan2(o.lookX-o.x,o.lookY-o.y),rel=Math.atan2(Math.sin(la-h.yaw),Math.cos(la-h.yaw));
     h.hy=(h.hy||0)+(Math.max(-.9,Math.min(.9,rel))*.6-(h.hy||0))*Math.min(1,dt*6);head.rotateY(h.hy);
   }else h.hy=(h.hy||0)*.9;
+  try{ballContact(h,o,dt)}catch(e){if(!h.ikErr){h.ikErr=1;console.warn('IK:',e&&e.message)}}
 }
 function poseHuman(h,o,dt,time){
   if(h.gl)return poseGlb(h,o,dt,time);
@@ -1053,6 +1119,7 @@ function drawGL(c,V){
   // jogadores 3D
   const mk=cosm("marker").c;S.ctrlRing.material.color.set(mk);
   let scorer=null;if(G.state==="goal"&&!V.replay){if(G._scr===undefined){const ev=G.events[G.events.length-1],t=ev?ev.team:null;let c=G.ball.last&&G.ball.last.team===t?G.ball.last:null;if(!c){let bd=1e9;for(const q of G.players){if(q.off||q.team!==t||q.role==="GK")continue;const d=Math.hypot(q.x-G.ball.x,q.y-G.ball.y);if(d<bd){bd=d;c=q}}}G._scr=c}scorer=G._scr}else G._scr=undefined;
+  const HOLD=(()=>{const ow=V.replay?null:G.ball.owner;if(!ow||ow.role!=="GK"||ow.dive||ow.gkJump>0||ow.stun>0)return null;return{gp:ow,x:ow.x+ow.fx*5.6,y:ow.y+ow.fy*5.6,z:BALL_R+12.4}})();
   const list=V.players,now=performance.now(),dtp=Math.min(.1,(now-(R.lastT||now))/1000),tsec=now/1000;R.lastT=now;
   for(let i=0;i<list.length;i++){
     const p=list[i],h=S.humans[i],gp=G.players[i];if(glbReady()&&!h.gl)attachGlb(h);
@@ -1063,13 +1130,13 @@ function drawGL(c,V){
     if(h.key!==lk){h.key=lk;setLook(h,{kit:kitOf(gp.team),code:G.teams[gp.team].s,gk:gp.role==="GK",gkShirt:gp.team===0?"#22c3b5":"#ff8a3d",ref:false,skin:SKIN[i%SKIN.length],hairStyle:(i*7+gp.team*3+gp.num)%6,hairCol:HAIR[(i+gp.num)%HAIR.length],beard:(i+gp.num)%5===1,name:gp.name,num:gp.num})}
     if(h.crestWait&&((R.fr=(R.fr||0)+1)%45===0)){const l=h.crestLook;h.crestTex.image=crestCanvas(l);h.crestTex.needsUpdate=true;h.crestWait=!l.crestOK}
     const spd=V.replay?(p.vx?1.6:0):Math.hypot(p.vx||0,p.vy||0);
-    poseHuman(h,{x:p.x,y:p.y,fx:p.fx,fy:p.fy,spd,sprint:!!p.sprinting,run:p.run||0,kick:V.replay?0:(p.kickAnim||0),slide:!V.replay&&p.dash>0&&p.tackling,down:p.stun>0,gk:gp.role==="GK",vx:V.replay?0:p.vx,vy:V.replay?0:p.vy,lookX:V.ball.x,lookY:V.ball.y,celebrate:scorer===gp,throwIn:now<(gp._thr||0),hasBall:G.ball.owner===gp,kickType:(G.ball.pend&&G.ball.pend.type==="shot")?"shot":"pass",jump:p.gkJump>0?p.gkJump:0,dive:p.dive?{t:p.dive.t,side:-p.dive.side*(p.fx<0?-1:1)}:null},dtp,tsec);
+    poseHuman(h,{x:p.x,y:p.y,fx:p.fx,fy:p.fy,spd,sprint:!!p.sprinting,run:p.run||0,kick:V.replay?0:(p.kickAnim||0),slide:!V.replay&&p.dash>0&&p.tackling,down:p.stun>0,gk:gp.role==="GK",vx:V.replay?0:p.vx,vy:V.replay?0:p.vy,lookX:V.ball.x,lookY:V.ball.y,celebrate:scorer===gp,throwIn:now<(gp._thr||0),hasBall:G.ball.owner===gp&&!V.replay,bx:V.ball.x,by:V.ball.y,bz:Math.max(0,V.ball.z||0),hold:(HOLD&&HOLD.gp===gp)?HOLD:null,kx:gp.kx,ky:gp.ky,kz:gp.kz||0,kickType:(G.ball.pend&&G.ball.pend.type==="shot")?"shot":"pass",jump:p.gkJump>0?p.gkJump:0,dive:p.dive?{t:p.dive.t,side:-p.dive.side*(p.fx<0?-1:1)}:null},dtp,tsec);
   }
   // sombra do chão por jogador e bola
   // (a sombra elíptica já é desenhada no sprite)
   // bola
   const b=V.ball;
-  const bz=Math.max(0,b.z||0);S.ballSp.position.set(b.x,BALL_R+bz,b.y);
+  const bz=Math.max(0,b.z||0);if(HOLD)S.ballSp.position.set(HOLD.x,HOLD.z,HOLD.y);else S.ballSp.position.set(b.x,BALL_R+bz,b.y);
   {const pb=S.bprev,dx=pb?b.x-pb.x:0,dy=pb?b.y-pb.y:0,dd=Math.hypot(dx,dy);
    if(pb&&dd>.001&&dd<70){S.bq=S.bq||new T.Quaternion();S.bax=S.bax||new T.Vector3();S.bax.set(dy,0,-dx).normalize();S.bq.setFromAxisAngle(S.bax,dd/BALL_R);S.ballSp.quaternion.premultiply(S.bq)}
    S.bprev={x:b.x,y:b.y};if(b.sp&&bz>.3)S.ballSp.rotateY(b.sp*.12)}
