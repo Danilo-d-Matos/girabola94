@@ -115,7 +115,7 @@ function volumeAlvo() {
 }
 var TEMPO = 8000, tAviso = null; /* o título da música aparece este tempo (ms) e desaparece */
 function anuncia(txt) {
-  if (!card) return; card.querySelector("#g94MusicaTit").textContent = "♪ " + txt;
+  if (!card) return; card.querySelector("#g94MusicaTit").textContent = "♪ " + txt + (gesto ? "" : "  ·  toca no ecrã para ouvir");
   var br = card.querySelector("#g94MusicaBarra"); br.style.transition = "none"; br.style.transform = "scaleX(1)"; void br.offsetWidth;
   card.style.opacity = "1"; card.style.transform = "none"; br.style.transition = "transform " + TEMPO + "ms linear"; br.style.transform = "scaleX(0)";
   clearTimeout(tAviso); tAviso = setTimeout(function () { if (card) { card.style.opacity = "0"; card.style.transform = "translateX(-24px) scale(.96)"; } }, TEMPO);
@@ -129,7 +129,7 @@ function criaCartao() {
   var barra = el("div", "position:absolute;left:0;bottom:0;height:3px;width:100%;background:#f6c744;transform-origin:left"); barra.id = "g94MusicaBarra";
   card.append(tit, barra); document.body.appendChild(card);
   /* os leitores ficam fora do ecrã: só se ouve o áudio */
-  oculto = el("div", "position:fixed;left:-10000px;top:0;width:220px;height:220px;overflow:hidden;opacity:0;pointer-events:none"); oculto.setAttribute("aria-hidden", "true"); oculto.id = "g94MusicaCorpo"; document.body.appendChild(oculto);
+  oculto = el("div", "position:fixed;left:0;bottom:0;width:220px;height:220px;overflow:hidden;opacity:.01;pointer-events:none;z-index:-1"); oculto.setAttribute("aria-hidden", "true"); oculto.id = "g94MusicaCorpo"; document.body.appendChild(oculto);
   return card;
 }
 function parar(sim) {
@@ -143,7 +143,7 @@ function carregaYT(cb) {
   if (ytCarregando) return; ytCarregando = true;
   var s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; s.async = true; s.onerror = function () { ytCarregando = false; }; document.head.appendChild(s);
 }
-var spTocou = false;
+var spTocou = false, spPausado = true, spUlt = 0;
 function carregaSP(cb) {
   if (spApi) { cb(spApi); return; }
   var antes = window.onSpotifyIframeApiReady; window.onSpotifyIframeApiReady = function (a) { spApi = a; try { if (antes) antes(a); } catch (e) { /* */ } cb(a); };
@@ -179,7 +179,7 @@ function mostra() {
       api.createController(alvoS, { uri: "spotify:" + f.tipo + ":" + f.ref, width: 220, height: 220 }, function (c) {
         spCtl = c;
         c.addListener("ready", function () { if (gesto) try { c.play(); } catch (e) { /* */ } });
-        c.addListener("playback_update", function (e) { var d = e && e.data; if (d && !d.isPaused) spTocou = true; if (d && d.duration && d.position >= d.duration - 400 && f.tipo === "track") muda(1); });
+        spPausado = true; c.addListener("playback_update", function (e) { var d = e && e.data; if (d) spPausado = !!d.isPaused; if (d && !d.isPaused) spTocou = true; if (d && d.duration && d.position >= d.duration - 400 && f.tipo === "track") muda(1); });
       });
     });
   }
@@ -190,9 +190,11 @@ function ciclo() {
   if (!l.length) { if (card) card.style.display = "none"; return; }
   if (ct !== ctxAtual) { ctxAtual = ct; idx = 0; atualId = ""; }
   if (!card || atualId === "") mostra();
+  /* o Spotify só começa depois de um toque/clique do jogador: tenta de novo até estar a tocar */
+  if (spCtl && gesto && spPausado && Date.now() - spUlt > 2500) { spUlt = Date.now(); try { spCtl.play(); } catch (e) { /* */ } }
   try { if (yt && ytPronto && yt.setVolume) yt.setVolume(volumeAlvo()); } catch (e) { /* */ }
 }
-window.G94Faixas = { ativo: ativo, lista: function () { return todas(); }, parar: function () { parar(true); }, retomar: function () { parar(false); atualId = ""; }, estado: function () { return { parado: parado, ctx: ctxAtual, faixa: atualId, cartao: !!card, yt: ytPronto }; } };
+window.G94Faixas = { ativo: ativo, lista: function () { return todas(); }, parar: function () { parar(true); }, retomar: function () { parar(false); atualId = ""; }, estado: function () { return { parado: parado, ctx: ctxAtual, faixa: atualId, cartao: !!card, yt: ytPronto, sp: !spPausado }; } };
 setInterval(ciclo, 1000);
 
 /* opção «Música do servidor» nas definições, só quando o servidor tem faixas */
