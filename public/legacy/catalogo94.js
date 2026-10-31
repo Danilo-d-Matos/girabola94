@@ -107,17 +107,21 @@ function volumeAlvo() {
   if (contexto() === "jogo") { var gm = PREF.gameMusic || "low"; mult = gm === "off" ? 0 : gm === "normal" ? .5 : .2; }
   return Math.round(Math.max(0, Math.min(1, mv * mult)) * 100);
 }
+var TEMPO = 8000, tAviso = null; /* o título da música aparece este tempo (ms) e desaparece */
+function anuncia(txt) {
+  if (!card) return; card.querySelector("#g94MusicaTit").textContent = "♪ " + txt;
+  var br = card.querySelector("#g94MusicaBarra"); br.style.transition = "none"; br.style.transform = "scaleX(1)"; void br.offsetWidth;
+  card.style.opacity = "1"; card.style.transform = "none"; br.style.transition = "transform " + TEMPO + "ms linear"; br.style.transform = "scaleX(0)";
+  clearTimeout(tAviso); tAviso = setTimeout(function () { if (card) { card.style.opacity = "0"; card.style.transform = "translateX(-24px) scale(.96)"; } }, TEMPO);
+}
 function el(tag, css, txt) { var e = document.createElement(tag); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; }
 function criaCartao() {
   if (card) return card;
-  card = el("div", "position:fixed;left:12px;bottom:12px;z-index:8000;width:210px;background:#08182af2;border:1px solid #27506f;border-radius:12px;box-shadow:0 12px 30px #0009;overflow:hidden;font:600 12px/1.3 Inter,system-ui,sans-serif;color:#eef4fa");
-  card.id = "g94Musica"; card.setAttribute("role", "region"); card.setAttribute("aria-label", "Música");
-  var topo = el("div", "display:flex;align-items:center;gap:6px;padding:6px 8px;background:#0d2236");
-  var tit = el("span", "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap", "♪"); tit.id = "g94MusicaTit";
-  function btn(txt, rot, fn) { var b = el("button", "background:transparent;border:1px solid #27506f;border-radius:7px;color:inherit;width:26px;height:24px;cursor:pointer;font-size:12px", txt); b.type = "button"; b.setAttribute("aria-label", rot); b.title = rot; b.onclick = fn; return b; }
-  topo.append(tit, btn("⏮", "Faixa anterior", function () { muda(-1); }), btn("⏭", "Faixa seguinte", function () { muda(1); }), btn("×", "Parar a música do servidor", function () { parar(true); }));
-  var nota = el("div", "padding:4px 8px 6px;color:#9fb4c4;font-weight:500;font-size:11px"); nota.id = "g94MusicaNota";
-  card.append(topo, nota); document.body.appendChild(card);
+  card = el("div", "position:fixed;left:14px;bottom:14px;z-index:8000;max-width:min(300px,calc(100vw - 28px));padding:9px 14px 11px;background:#08182af2;border:1px solid #27506f;border-left:4px solid #f6c744;border-radius:10px;box-shadow:0 12px 30px #0009;overflow:hidden;font:600 13px/1.3 Inter,system-ui,sans-serif;color:#eef4fa;pointer-events:none;opacity:0;transform:translateX(-24px) scale(.96);transition:opacity .45s ease,transform .45s cubic-bezier(.2,.9,.3,1.2)");
+  card.id = "g94Musica"; card.setAttribute("role", "status"); card.setAttribute("aria-live", "polite");
+  var tit = el("div", "overflow:hidden;text-overflow:ellipsis;white-space:nowrap", "♪"); tit.id = "g94MusicaTit";
+  var barra = el("div", "position:absolute;left:0;bottom:0;height:3px;width:100%;background:#f6c744;transform-origin:left"); barra.id = "g94MusicaBarra";
+  card.append(tit, barra); document.body.appendChild(card);
   /* os leitores ficam fora do ecrã: só se ouve o áudio */
   oculto = el("div", "position:fixed;left:-10000px;top:0;width:220px;height:220px;overflow:hidden;opacity:0;pointer-events:none"); oculto.setAttribute("aria-hidden", "true"); oculto.id = "g94MusicaCorpo"; document.body.appendChild(oculto);
   return card;
@@ -147,7 +151,7 @@ function mostra() {
   var l = faixasDoContexto(contexto()); if (!l.length) return;
   var f = l[idx % l.length]; if (atualId === f.id && card) return; atualId = f.id;
   criaCartao();
-  var corpo = oculto, nota = card.querySelector("#g94MusicaNota"); card.querySelector("#g94MusicaTit").textContent = "♪ " + f.titulo + (f.artista ? " · " + f.artista : "");
+  var corpo = oculto, nota = {}; anuncia(f.titulo);
   corpo.textContent = ""; yt = null; ytPronto = false; spCtl = null;
   if (f.plataforma === "youtube") {
     nota.textContent = "YouTube · só áudio";
@@ -175,12 +179,11 @@ function mostra() {
   }
 }
 function ciclo() {
-  if (!ativo() || !(typeof PREF !== "undefined" && PREF.sound)) { if (card) { try { if (yt && yt.pauseVideo) yt.pauseVideo(); } catch (e) { /* */ } card.style.display = "none"; } return; }
+  if (!ativo() || !(typeof PREF !== "undefined" && PREF.sound)) { if (card) { try { if (yt && yt.pauseVideo) yt.pauseVideo(); } catch (e) { /* */ } } return; }
   var ct = contexto(), l = faixasDoContexto(ct);
   if (!l.length) { if (card) card.style.display = "none"; return; }
   if (ct !== ctxAtual) { ctxAtual = ct; idx = 0; atualId = ""; }
   if (!card || atualId === "") mostra();
-  if (card) card.style.display = "";
   try { if (yt && ytPronto && yt.setVolume) yt.setVolume(volumeAlvo()); } catch (e) { /* */ }
 }
 window.G94Faixas = { ativo: ativo, lista: function () { return (CAT && CAT.musicas) || []; }, parar: function () { parar(true); }, retomar: function () { parar(false); atualId = ""; }, estado: function () { return { parado: parado, ctx: ctxAtual, faixa: atualId, cartao: !!card, yt: ytPronto }; } };
