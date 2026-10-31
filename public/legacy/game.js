@@ -84,7 +84,7 @@ function sSet(k,v){if(!STORAGE_OK){saveWarning();return false}try{localStorage.s
 const DEFAULT_KEYS={up:["KeyW","ArrowUp"],down:["KeyS","ArrowDown"],left:["KeyA","ArrowLeft"],right:["KeyD","ArrowRight"],pass:["KeyX",""],shoot:["Space",""],switch:["KeyC",""],sprint:["ShiftLeft","ShiftRight"],pause:["KeyP","Escape"],dribble:["KeyZ",""],cancel:["KeyV",""]};
 const ACTIONS=[["up","Mover para cima"],["down","Mover para baixo"],["left","Mover para a esquerda"],["right","Mover para a direita"],["pass","Passe"],["shoot","Remate (com bola) / desarme (sem bola)"],["switch","Trocar de jogador"],["sprint","Sprint"],["dribble","Drible (mais lento, bola junto ao pé)"],["cancel","Cancelar passe ou remate carregado"],["pause","Pausa"]];
 function defaultPrefs(){let rm=false;try{rm=matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){}
-  return{v:1,fatigue:true,shotTiming:false,timingWin:90,diff:"normal",keys:JSON.parse(JSON.stringify(DEFAULT_KEYS)),autoSwitch:"assist",reduceFx:rm,replays:true,rules:"classic",tactic:"bal",form:"221",legs:1,sound:true,tutorialSeen:false,camera:"tv",camZoom:1,offsideVar:true,daytime:"night",stadium:"imbondeiro",crowd:"auto",ballDesign:"auto",musicVol:.3,sfxVol:.9,crowdVol:.8,musicStyle:"auto",gameMusic:"low",passAssist:"assist",shotStyle:"power",quality:"high",touchScale:1}}
+  return{v:1,fatigue:true,shotTiming:false,timingWin:90,diff:"normal",keys:JSON.parse(JSON.stringify(DEFAULT_KEYS)),autoSwitch:"assist",reduceFx:rm,replays:true,rules:"classic",tactic:"bal",form:"221",legs:1,sound:true,tutorialSeen:false,camera:"tv",camZoom:1,offsideVar:true,daytime:"night",stadium:"imbondeiro",crowd:"auto",ballDesign:"auto",musicVol:.15,musicVolV:2,sfxVol:.9,crowdVol:.8,musicStyle:"auto",gameMusic:"low",passAssist:"assist",shotStyle:"power",quality:"high",touchScale:1}}
 function loadPrefs(){
   const d=defaultPrefs(),raw=parseJSON(sGet(K.prefs)||"null");
   if(raw&&typeof raw==="object"&&!Array.isArray(raw)){
@@ -103,6 +103,8 @@ function loadPrefs(){
     if(typeof raw.intro==="boolean")d.intro=raw.intro;
     if(typeof raw.camZoom==="number"&&raw.camZoom>=.5&&raw.camZoom<=2.5)d.camZoom=raw.camZoom;
     for(const k of ["musicVol","sfxVol","crowdVol","ballVol","refVol","uiVol"])if(typeof raw[k]==="number"&&raw[k]>=0&&raw[k]<=1)d[k]=raw[k];
+    /* a música passou a arrancar a 15%: quem ainda tem o volume antigo guardado (versão < 2) é passado para o novo */
+    if(raw.musicVolV!==2){d.musicVol=.15}d.musicVolV=2;
     if(["auto","semba","kizomba","kuduro","off","faixas","gerada"].includes(raw.musicStyle))d.musicStyle=raw.musicStyle;
     if(["low","normal","off"].includes(raw.gameMusic))d.gameMusic=raw.gameMusic;
     if([60,90,140].includes(raw.timingWin))d.timingWin=raw.timingWin;
