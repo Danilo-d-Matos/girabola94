@@ -95,12 +95,18 @@ function mostraAviso(c) {
 var oculto = null, spCtl = null, spApi = null, spCarregando = false, gesto = false, parado = false, idx = 0, ctxAtual = "", card = null, yt = null, ytPronto = false, ytCarregando = false, atualId = "";
 try { parado = sessionStorage.getItem("g94.musica.parada") === "1"; } catch (e) { /* */ }
 function contexto() { return typeof G !== "undefined" && G ? "jogo" : "menu"; }
-function faixasDoContexto(ct) { return ((CAT && CAT.musicas) || []).filter(function (m) { return m.uso === "ambos" || m.uso === ct; }); }
+/* músicas de fundo por omissão: valem enquanto o servidor não definir outras (ou se não houver servidor) */
+var PADRAO = [
+  { id: "padrao1", titulo: "Dança Dos Combas", artista: "Bruno M", uso: "ambos", plataforma: "spotify", tipo: "track", ref: "0iW1McQ8pRN4EUkU82GDVa" },
+  { id: "padrao2", titulo: "Comboio II", artista: "Os Lambas", uso: "ambos", plataforma: "spotify", tipo: "track", ref: "7JRFfBG64rc0Zj7oDWobTg" }
+];
+function todas() { return CAT ? (CAT.musicas || []) : PADRAO; }
+function faixasDoContexto(ct) { return todas().filter(function (m) { return m.uso === "ambos" || m.uso === ct; }); }
 /** o motor de áudio consulta isto: com música do servidor ativa, não gera música sintética */
 function ativo() {
-  if (parado || !CAT || !CAT.musicas || !CAT.musicas.length) return false;
+  if (parado || !todas().length) return false;
   var s = (typeof PREF !== "undefined" && PREF.musicStyle) || "auto";
-  return s === "faixas" || (s === "auto" && CAT.usarFaixas !== false);
+  return s === "faixas" || (s === "auto" && !(CAT && CAT.usarFaixas === false));
 }
 function volumeAlvo() {
   var mv = typeof PREF.musicVol === "number" ? PREF.musicVol : .75, mult = 1;
@@ -186,14 +192,14 @@ function ciclo() {
   if (!card || atualId === "") mostra();
   try { if (yt && ytPronto && yt.setVolume) yt.setVolume(volumeAlvo()); } catch (e) { /* */ }
 }
-window.G94Faixas = { ativo: ativo, lista: function () { return (CAT && CAT.musicas) || []; }, parar: function () { parar(true); }, retomar: function () { parar(false); atualId = ""; }, estado: function () { return { parado: parado, ctx: ctxAtual, faixa: atualId, cartao: !!card, yt: ytPronto }; } };
+window.G94Faixas = { ativo: ativo, lista: function () { return todas(); }, parar: function () { parar(true); }, retomar: function () { parar(false); atualId = ""; }, estado: function () { return { parado: parado, ctx: ctxAtual, faixa: atualId, cartao: !!card, yt: ytPronto }; } };
 setInterval(ciclo, 1000);
 
 /* opção «Música do servidor» nas definições, só quando o servidor tem faixas */
 function opcao() {
-  var o = document.querySelector(".options-screen"); if (!o || o.querySelector(".g94-faixas") || !CAT || !CAT.musicas || !CAT.musicas.length) return;
+  var o = document.querySelector(".options-screen"); if (!o || o.querySelector(".g94-faixas") || !todas().length) return;
   var p = document.createElement("div"); p.className = "panel g94-faixas";
-  p.innerHTML = '<p class="panel-title">Música do servidor</p><p class="note">O servidor tem ' + CAT.musicas.length + ' faixa(s) do YouTube/Spotify, que tocam num leitor no canto do ecrã. Podes ouvi-las ou manter a música gerada pelo jogo.</p><div class="seg" role="group"></div>';
+  p.innerHTML = '<p class="panel-title">Música do servidor</p><p class="note">Há ' + todas().length + ' faixa(s) do YouTube/Spotify, que tocam num leitor no canto do ecrã. Podes ouvi-las ou manter a música gerada pelo jogo.</p><div class="seg" role="group"></div>';
   var g = p.querySelector(".seg");
   [["faixas", "Faixas do servidor"], ["gerada", "Música gerada pelo jogo"]].forEach(function (it) {
     var b = document.createElement("button"); b.type = "button"; b.textContent = it[1]; b.setAttribute("aria-pressed", String(ativo() === (it[0] === "faixas")));
