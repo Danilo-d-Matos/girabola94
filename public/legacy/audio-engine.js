@@ -11,7 +11,7 @@ function init(){
   master=c.createGain();comp=c.createDynamicsCompressor();comp.threshold.value=-16;comp.knee.value=12;comp.ratio.value=4;comp.attack.value=.008;comp.release.value=.25;
   master.connect(comp);comp.connect(c.destination);
   sfxBus=c.createGain();crowdBus=c.createGain();musicBus=c.createGain();musicGate=c.createGain();
-  sfxBus.connect(master);crowdBus.connect(master);musicGate.connect(musicBus);musicBus.connect(master);
+  sfxBus.connect(master);crowdBus.connect(master);musicGate.connect(musicBus);concertFx();
   var n=c.sampleRate*2;noiseBuf=c.createBuffer(1,n,c.sampleRate);var d=noiseBuf.getChannelData(0);for(var i=0;i<n;i++)d[i]=Math.random()*2-1;
   Aud.CR=CR;Aud.master=master;Aud.comp=comp;Aud.crowd=crowdBus;Aud.music=musicBus;Aud.sfxBus=sfxBus;Aud.ok=true;buildCrowd();return true;
 }
@@ -24,6 +24,18 @@ function unlock(){
 function env(g,t,a,peak,dur,floor){var fl=floor||.0001;g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(fl,t);g.gain.exponentialRampToValueAtTime(Math.max(fl*1.01,peak),t+a);g.gain.exponentialRampToValueAtTime(fl,t+dur)}
 function hz(m){return 440*Math.pow(2,(m-69)/12)}
 function noiseSrc(t,dur,loop){var s=c.createBufferSource();s.buffer=noiseBuf;s.loop=!!loop;s.playbackRate.value=.8+Math.random()*.4;s.start(t,Math.random()*1.2);if(!loop)s.stop(t+dur+.05);return s}
+/* Música com som de estádio vazio / concerto: reverberação grande e abafada (impulso de ruído a decair, ~3 s, sem agudos),
+   eco de 350 ms (2 repetições, −12 dB) e filtro passa-baixo a 7 kHz; seco −4 dB, molhado −2 dB. */
+function concertFx(){
+  var sr=c.sampleRate,len=Math.floor(sr*3.2),ir=c.createBuffer(2,len,sr);
+  for(var ch=0;ch<2;ch++){var d=ir.getChannelData(ch),lp=0;for(var i=0;i<len;i++){var t=i/len,w=(Math.random()*2-1)*Math.pow(1-t,2.6);lp+=(w-lp)*(.55-.4*t);d[i]=lp*(i<sr*.02?i/(sr*.02):1)}}
+  var dry=c.createGain(),rev=c.createConvolver(),wet=c.createGain(),dl=c.createDelay(1),fb=c.createGain(),eco=c.createGain(),air=c.createBiquadFilter();
+  dry.gain.value=.63;wet.gain.value=.8;rev.buffer=ir;dl.delayTime.value=.35;fb.gain.value=.25;eco.gain.value=.25;air.type="lowpass";air.frequency.value=7000;air.Q.value=.7;
+  musicBus.connect(dry);dry.connect(air);
+  musicBus.connect(rev);rev.connect(wet);wet.connect(air);
+  musicBus.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(eco);eco.connect(air);
+  air.connect(master);Aud.concert={dry:dry,wet:wet,eco:eco};
+}
 function nburst(out,t,o){var s=noiseSrc(t,o.dur),f=c.createBiquadFilter(),g=c.createGain();f.type=o.type||"bandpass";f.frequency.value=o.f||2000;f.Q.value=o.q||1;if(o.f1)f.frequency.exponentialRampToValueAtTime(o.f1,t+o.dur);s.connect(f);f.connect(g);g.connect(out);env(g,t,o.a||.004,o.peak||.3,o.dur);return g}
 function tone(out,t,o){var os=c.createOscillator(),g=c.createGain();os.type=o.type||"sine";os.frequency.setValueAtTime(o.f0,t);if(o.f1)os.frequency.exponentialRampToValueAtTime(o.f1,t+(o.sw||o.dur));os.connect(g);var last=g;if(o.lp){var f=c.createBiquadFilter();f.type="lowpass";f.frequency.value=o.lp;g.disconnect();g.connect(f);last=f}last.connect(out);env(g,t,o.a||.004,o.peak||.3,o.dur);os.start(t);os.stop(t+o.dur+.05);return os}
 /* ---------- efeitos sonoros ---------- */
