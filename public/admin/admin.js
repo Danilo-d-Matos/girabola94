@@ -97,10 +97,15 @@ var CANCELAR = { txt: "Cancelar", cls: "ghost", val: false, cancel: true };
 function fecharSo(titulo, corpo) { return dialogo(titulo, corpo, [{ txt: "Fechar", val: true }]); }
 
 /* ---------- entrada ---------- */
-function mostrarLogin(msg) { $("#app").hidden = true; $("#login").hidden = false; $("#lApi").value = API; $("#lEmail").value = EMAIL; $("#lErro").textContent = msg || ""; }
+/* o endereço do servidor descobre-se sozinho: admin/servidor.json (gerado no build) ou a mesma máquina, porta 2567 */
+async function descobrirApi() {
+  try { var r = await fetch("servidor.json", { cache: "no-store" }); if (r.ok) { var j = await r.json(); if (j.url) return String(j.url).replace(/^wss:/, "https:").replace(/^ws:/, "http:").replace(/\/+$/, ""); } } catch (e) { /* sem ficheiro */ }
+  return location.protocol + "//" + (location.hostname || "localhost") + ":2567";
+}
+function mostrarLogin(msg) { $("#app").hidden = true; $("#login").hidden = false; $("#lApi").value = API; if (msg && /ligar ao servidor/i.test(msg)) $("#lAv").open = true; $("#lEmail").value = EMAIL; $("#lErro").textContent = msg || ""; }
 $("#fLogin").addEventListener("submit", async function (e) {
   e.preventDefault(); var erro = $("#lErro"); erro.textContent = "";
-  API = $("#lApi").value.trim().replace(/\/+$/, ""); EMAIL = $("#lEmail").value.trim().toLowerCase();
+  API = $("#lApi").value.trim().replace(/\/+$/, "") || await descobrirApi(); $("#lApi").value = API; EMAIL = $("#lEmail").value.trim().toLowerCase();
   try {
     var r = await fetch(API + "/conta/entrar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: EMAIL, senha: $("#lSenha").value }) });
     var j = await r.json(); if (!r.ok) throw new Error(j.erro || "Erro " + r.status);
