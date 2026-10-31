@@ -95,7 +95,7 @@ var ALT = {
   FCL: ["#2357b9", "#f5f5f2", "#2357b9", "#2357b9", 3]
 };
 function alternativo(t) {
-  var a = ALT[t.s];
+  var a = (window.G94ALT && window.G94ALT[t.s]) || ALT[t.s];
   return a ? { shirt: a[0], accent: a[1], shorts: a[2], socks: a[3], pattern: a[4], custom: true }
            : { shirt: t.c2, accent: t.c1, shorts: t.c1, socks: t.c2, pattern: 0, custom: true };
 }
