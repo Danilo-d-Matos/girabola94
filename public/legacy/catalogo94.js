@@ -92,7 +92,7 @@ function mostraAviso(c) {
 }
 
 /* ---------- música: leitores incorporados do YouTube e do Spotify ---------- */
-var parado = false, idx = 0, ctxAtual = "", card = null, yt = null, ytPronto = false, ytCarregando = false, atualId = "";
+var oculto = null, spCtl = null, spApi = null, spCarregando = false, gesto = false, parado = false, idx = 0, ctxAtual = "", card = null, yt = null, ytPronto = false, ytCarregando = false, atualId = "";
 try { parado = sessionStorage.getItem("g94.musica.parada") === "1"; } catch (e) { /* */ }
 function contexto() { return typeof G !== "undefined" && G ? "jogo" : "menu"; }
 function faixasDoContexto(ct) { return ((CAT && CAT.musicas) || []).filter(function (m) { return m.uso === "ambos" || m.uso === ct; }); }
@@ -110,19 +110,21 @@ function volumeAlvo() {
 function el(tag, css, txt) { var e = document.createElement(tag); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; }
 function criaCartao() {
   if (card) return card;
-  card = el("div", "position:fixed;left:12px;bottom:12px;z-index:8000;width:224px;background:#08182af2;border:1px solid #27506f;border-radius:12px;box-shadow:0 12px 30px #0009;overflow:hidden;font:600 12px/1.3 Inter,system-ui,sans-serif;color:#eef4fa");
+  card = el("div", "position:fixed;left:12px;bottom:12px;z-index:8000;width:210px;background:#08182af2;border:1px solid #27506f;border-radius:12px;box-shadow:0 12px 30px #0009;overflow:hidden;font:600 12px/1.3 Inter,system-ui,sans-serif;color:#eef4fa");
   card.id = "g94Musica"; card.setAttribute("role", "region"); card.setAttribute("aria-label", "Música");
   var topo = el("div", "display:flex;align-items:center;gap:6px;padding:6px 8px;background:#0d2236");
   var tit = el("span", "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap", "♪"); tit.id = "g94MusicaTit";
   function btn(txt, rot, fn) { var b = el("button", "background:transparent;border:1px solid #27506f;border-radius:7px;color:inherit;width:26px;height:24px;cursor:pointer;font-size:12px", txt); b.type = "button"; b.setAttribute("aria-label", rot); b.title = rot; b.onclick = fn; return b; }
   topo.append(tit, btn("⏮", "Faixa anterior", function () { muda(-1); }), btn("⏭", "Faixa seguinte", function () { muda(1); }), btn("×", "Parar a música do servidor", function () { parar(true); }));
-  var corpo = el("div"); corpo.id = "g94MusicaCorpo";
-  var nota = el("div", "padding:5px 8px;color:#9fb4c4;font-weight:500;font-size:11px"); nota.id = "g94MusicaNota";
-  card.append(topo, corpo, nota); document.body.appendChild(card); return card;
+  var nota = el("div", "padding:4px 8px 6px;color:#9fb4c4;font-weight:500;font-size:11px"); nota.id = "g94MusicaNota";
+  card.append(topo, nota); document.body.appendChild(card);
+  /* os leitores ficam fora do ecrã: só se ouve o áudio */
+  oculto = el("div", "position:fixed;left:-10000px;top:0;width:220px;height:220px;overflow:hidden;opacity:0;pointer-events:none"); oculto.setAttribute("aria-hidden", "true"); oculto.id = "g94MusicaCorpo"; document.body.appendChild(oculto);
+  return card;
 }
 function parar(sim) {
   parado = !!sim; try { sessionStorage.setItem("g94.musica.parada", sim ? "1" : "0"); } catch (e) { /* */ }
-  if (sim) { try { if (yt && yt.pauseVideo) yt.pauseVideo(); } catch (e) { /* */ } if (card) { card.remove(); card = null; yt = null; ytPronto = false; atualId = ""; } }
+  if (sim) { try { if (yt && yt.pauseVideo) yt.pauseVideo(); if (spCtl) spCtl.pause(); } catch (e) { /* */ } if (card) { card.remove(); card = null; if (oculto) oculto.remove(); oculto = null; yt = null; ytPronto = false; spCtl = null; atualId = ""; } }
 }
 function muda(d) { var l = faixasDoContexto(contexto()); if (!l.length) return; idx = (idx + d + l.length * 100) % l.length; atualId = ""; mostra(); }
 function carregaYT(cb) {
@@ -131,30 +133,45 @@ function carregaYT(cb) {
   if (ytCarregando) return; ytCarregando = true;
   var s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; s.async = true; s.onerror = function () { ytCarregando = false; }; document.head.appendChild(s);
 }
+var spTocou = false;
+function carregaSP(cb) {
+  if (spApi) { cb(spApi); return; }
+  var antes = window.onSpotifyIframeApiReady; window.onSpotifyIframeApiReady = function (a) { spApi = a; try { if (antes) antes(a); } catch (e) { /* */ } cb(a); };
+  if (spCarregando) return; spCarregando = true;
+  var s = document.createElement("script"); s.src = "https://open.spotify.com/embed/iframe-api/v1"; s.async = true; s.onerror = function () { spCarregando = false; }; document.head.appendChild(s);
+}
+/* os navegadores só deixam tocar áudio depois de um toque/clique do jogador */
+function aoGesto() { gesto = true; try { if (spCtl) spCtl.play(); } catch (e) { /* */ } try { if (yt && ytPronto) yt.playVideo(); } catch (e) { /* */ } }
+document.addEventListener("pointerdown", aoGesto, true); document.addEventListener("keydown", aoGesto, true);
 function mostra() {
   var l = faixasDoContexto(contexto()); if (!l.length) return;
   var f = l[idx % l.length]; if (atualId === f.id && card) return; atualId = f.id;
   criaCartao();
-  var corpo = card.querySelector("#g94MusicaCorpo"), nota = card.querySelector("#g94MusicaNota"); card.querySelector("#g94MusicaTit").textContent = "♪ " + f.titulo + (f.artista ? " · " + f.artista : "");
-  corpo.textContent = ""; yt = null; ytPronto = false;
+  var corpo = oculto, nota = card.querySelector("#g94MusicaNota"); card.querySelector("#g94MusicaTit").textContent = "♪ " + f.titulo + (f.artista ? " · " + f.artista : "");
+  corpo.textContent = ""; yt = null; ytPronto = false; spCtl = null;
   if (f.plataforma === "youtube") {
-    nota.textContent = "YouTube · volume segue a opção «Música»";
+    nota.textContent = "YouTube · só áudio";
     var alvo = el("div"); alvo.id = "g94YT"; corpo.appendChild(alvo);
     carregaYT(function () {
       if (atualId !== f.id || !document.getElementById("g94YT")) return;
       var pv = { autoplay: 1, rel: 0, modestbranding: 1, playsinline: 1 }; if (f.tipo === "playlist") { pv.listType = "playlist"; pv.list = f.ref; }
-      yt = new YT.Player("g94YT", { width: 224, height: 200, videoId: f.tipo === "playlist" ? undefined : f.ref, playerVars: pv, events: {
+      yt = new YT.Player("g94YT", { width: 220, height: 220, videoId: f.tipo === "playlist" ? undefined : f.ref, playerVars: pv, events: {
         onReady: function (e) { ytPronto = true; try { e.target.setVolume(volumeAlvo()); e.target.playVideo(); } catch (x) { /* */ } },
         onStateChange: function (e) { if (e.data === 0 && f.tipo !== "playlist") muda(1); },
         onError: function () { setTimeout(function () { muda(1); }, 1500); }
       } });
     });
   } else {
-    nota.textContent = "Spotify · carrega em ▶ e ajusta o volume no leitor";
-    var fr = document.createElement("iframe");
-    fr.src = "https://open.spotify.com/embed/" + encodeURIComponent(f.tipo) + "/" + encodeURIComponent(f.ref) + "?theme=0";
-    fr.width = "224"; fr.height = f.tipo === "track" || f.tipo === "episode" ? "80" : "152"; fr.style.cssText = "border:0;display:block"; fr.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"; fr.loading = "lazy";
-    fr.title = "Spotify: " + f.titulo; corpo.appendChild(fr);
+    nota.textContent = "Spotify · só áudio (toca após o primeiro toque/clique)";
+    var alvoS = el("div"); corpo.appendChild(alvoS);
+    carregaSP(function (api) {
+      if (atualId !== f.id) return;
+      api.createController(alvoS, { uri: "spotify:" + f.tipo + ":" + f.ref, width: 220, height: 220 }, function (c) {
+        spCtl = c;
+        c.addListener("ready", function () { if (gesto) try { c.play(); } catch (e) { /* */ } });
+        c.addListener("playback_update", function (e) { var d = e && e.data; if (d && !d.isPaused) spTocou = true; if (d && d.duration && d.position >= d.duration - 400 && f.tipo === "track") muda(1); });
+      });
+    });
   }
 }
 function ciclo() {
