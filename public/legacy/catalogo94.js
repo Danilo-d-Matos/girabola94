@@ -191,7 +191,10 @@ function ciclo() {
   if (!ativo() || !(typeof PREF !== "undefined" && PREF.sound)) { if (card) { try { if (yt && yt.pauseVideo) yt.pauseVideo(); } catch (e) { /* */ } } return; }
   var ct = contexto(), l = faixasDoContexto(ct);
   if (!l.length) { if (card) card.style.display = "none"; return; }
-  if (ct !== ctxAtual) { ctxAtual = ct; idx = 0; atualId = ""; }
+  if (ct !== ctxAtual) { /* menu ↔ jogo: se a música atual também serve no novo sítio, continua sem recomeçar */
+    ctxAtual = ct; var pos = -1; l.forEach(function (m, i) { if (m.id === atualId) pos = i; });
+    if (pos >= 0 && card) idx = pos; else { idx = 0; atualId = ""; }
+  }
   if (!card || atualId === "") mostra();
   /* o Spotify só começa depois de um toque/clique do jogador: tenta de novo até estar a tocar */
   if (spCtl && gesto && spPausado && Date.now() - spUlt > 2500) { spUlt = Date.now(); try { spCtl.play(); } catch (e) { /* */ } }
