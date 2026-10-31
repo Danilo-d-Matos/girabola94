@@ -26,6 +26,13 @@ function hz(m){return 440*Math.pow(2,(m-69)/12)}
 function noiseSrc(t,dur,loop){var s=c.createBufferSource();s.buffer=noiseBuf;s.loop=!!loop;s.playbackRate.value=.8+Math.random()*.4;s.start(t,Math.random()*1.2);if(!loop)s.stop(t+dur+.05);return s}
 /* Música com som de estádio vazio / concerto: reverberação grande e abafada (impulso de ruído a decair, ~3 s, sem agudos),
    eco de 350 ms (2 repetições, −12 dB) e filtro passa-baixo a 7 kHz; seco −4 dB, molhado −2 dB. */
+/* efeito de estádio vazio: ligado/desligado e intensidade (0–100) vêm da área de administração */
+Aud.efeito={on:true,nivel:100};
+Aud.setEfeito=function(on,nivel){
+  if(typeof on==="boolean")Aud.efeito.on=on;if(typeof nivel==="number"&&nivel>=0&&nivel<=100)Aud.efeito.nivel=nivel;
+  var cn=Aud.concert;if(!cn||!c)return;var k=Aud.efeito.on?Aud.efeito.nivel/100:0,t=c.currentTime;
+  cn.dry.gain.setTargetAtTime(1-.37*k,t,.3);cn.wet.gain.setTargetAtTime(.8*k,t,.3);cn.eco.gain.setTargetAtTime(.25*k,t,.3);
+};
 function concertFx(){
   var sr=c.sampleRate,len=Math.floor(sr*3.2),ir=c.createBuffer(2,len,sr);
   for(var ch=0;ch<2;ch++){var d=ir.getChannelData(ch),lp=0;for(var i=0;i<len;i++){var t=i/len,w=(Math.random()*2-1)*Math.pow(1-t,2.6);lp+=(w-lp)*(.55-.4*t);d[i]=lp*(i<sr*.02?i/(sr*.02):1)}}
@@ -34,7 +41,7 @@ function concertFx(){
   musicBus.connect(dry);dry.connect(air);
   musicBus.connect(rev);rev.connect(wet);wet.connect(air);
   musicBus.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(eco);eco.connect(air);
-  air.connect(master);Aud.concert={dry:dry,wet:wet,eco:eco};
+  air.connect(master);Aud.concert={dry:dry,wet:wet,eco:eco};Aud.setEfeito();
 }
 function nburst(out,t,o){var s=noiseSrc(t,o.dur),f=c.createBiquadFilter(),g=c.createGain();f.type=o.type||"bandpass";f.frequency.value=o.f||2000;f.Q.value=o.q||1;if(o.f1)f.frequency.exponentialRampToValueAtTime(o.f1,t+o.dur);s.connect(f);f.connect(g);g.connect(out);env(g,t,o.a||.004,o.peak||.3,o.dur);return g}
 function tone(out,t,o){var os=c.createOscillator(),g=c.createGain();os.type=o.type||"sine";os.frequency.setValueAtTime(o.f0,t);if(o.f1)os.frequency.exponentialRampToValueAtTime(o.f1,t+(o.sw||o.dur));os.connect(g);var last=g;if(o.lp){var f=c.createBiquadFilter();f.type="lowpass";f.frequency.value=o.lp;g.disconnect();g.connect(f);last=f}last.connect(out);env(g,t,o.a||.004,o.peak||.3,o.dur);os.start(t);os.stop(t+o.dur+.05);return os}

@@ -479,15 +479,20 @@ VISTAS.clubes = async function (m) {
 /* ---------- configuração ---------- */
 VISTAS.config = async function (m) {
   var c = await api("GET", "/admin/config"); if (atual !== "config") return; secao(m, "Configuração");
-  var av = h("textarea", { rows: 3, maxlength: 240, placeholder: "Ex.: Manutenção hoje às 22h." }), man = h("input", { type: "checkbox" }), fx = h("input", { type: "checkbox" }); av.value = c.aviso; man.checked = c.manutencao; fx.checked = c.usarFaixas;
-  var inicial = JSON.stringify([av.value, man.checked, fx.checked]);
+  var av = h("textarea", { rows: 3, maxlength: 240, placeholder: "Ex.: Manutenção hoje às 22h." }), man = h("input", { type: "checkbox" }), fx = h("input", { type: "checkbox" }), ef = h("input", { type: "checkbox" }), nv = h("input", { type: "range", min: 0, max: 100, step: 5, style: "flex:1;max-width:260px" }), nvT = h("b", null);
+  av.value = c.aviso; man.checked = c.manutencao; fx.checked = c.usarFaixas; ef.checked = c.efeitoEstadio !== false; nv.value = typeof c.efeitoNivel === "number" ? c.efeitoNivel : 100;
+  function estadoNv() { nvT.textContent = nv.value + "%"; nv.disabled = !ef.checked; } nv.addEventListener("input", estadoNv); ef.addEventListener("change", estadoNv); estadoNv();
+  var vals = function () { return JSON.stringify([av.value, man.checked, fx.checked, ef.checked, +nv.value]); }, inicial = vals();
   m.append(h("div", { class: "painel" }, h("h3", null, "Aviso aos jogadores"), h("p", { class: "nota" }, "Aparece no jogo (até 240 caracteres). Deixa vazio para não mostrar nada."), av,
     h("label", { class: "chk", style: "margin-top:10px" }, man, "Modo de manutenção (o aviso fica a vermelho e o online avisa que está em manutenção)"),
-    h("h3", null, "Música"), h("label", { class: "chk" }, fx, "Tocar as músicas do YouTube/Spotify por omissão (cada jogador pode escolher a música gerada pelo jogo nas Opções)"),
+    h("h3", null, "Música"), h("label", { class: "chk" }, fx, "Tocar as músicas do YouTube por omissão (cada jogador pode escolher a música gerada pelo jogo nas Opções)"),
+    h("h3", null, "Efeito de estádio vazio"), h("p", { class: "nota" }, "Dá à música gerada pelo jogo o som de um estádio enorme e vazio: reverberação grande e abafada, eco de 350 ms (2 repetições a −12 dB) e filtro de 7000 Hz, sem adicionar plateia. Não se aplica às músicas do YouTube, porque o YouTube toca num leitor que o jogo não consegue processar."),
+    h("label", { class: "chk" }, ef, "Efeito ligado"), h("label", { class: "chk", style: "margin-top:6px" }, "Intensidade", nv, nvT),
     h("div", { class: "rodape" }, btn("Guardar", async function () {
-      if (JSON.stringify([av.value, man.checked, fx.checked]) === inicial) { aviso("Não há alterações para guardar."); return; }
+      if (vals() === inicial) { aviso("Não há alterações para guardar."); return; }
       var txt = ["Guardar a configuração do jogo?"]; if (man.checked) txt.push("O modo de manutenção fica ligado: os jogadores vão ver o aviso a vermelho."); if (!man.checked && JSON.parse(inicial)[1]) txt.push("O modo de manutenção fica desligado.");
-      if (await acao({ titulo: "Guardar configuração", texto: txt, rotulo: "Guardar", perigo: man.checked, sucesso: "Configuração guardada.", fazer: function () { return api("PUT", "/admin/config", { aviso: av.value, manutencao: man.checked, usarFaixas: fx.checked }); } })) inicial = JSON.stringify([av.value, man.checked, fx.checked]);
+      if (ef.checked !== JSON.parse(inicial)[3] || +nv.value !== JSON.parse(inicial)[4]) txt.push(ef.checked ? "O efeito de estádio vazio fica ligado a " + nv.value + "%." : "O efeito de estádio vazio fica desligado.");
+      if (await acao({ titulo: "Guardar configuração", texto: txt, rotulo: "Guardar", perigo: man.checked, sucesso: "Configuração guardada.", fazer: function () { return api("PUT", "/admin/config", { aviso: av.value, manutencao: man.checked, usarFaixas: fx.checked, efeitoEstadio: ef.checked, efeitoNivel: +nv.value }); } })) inicial = vals();
     }, ""))));
 };
 

@@ -214,7 +214,8 @@ if (window.MutationObserver) { var q = false; new MutationObserver(function () {
 
 /* ---------- arranque ---------- */
 function usa(c) {
-  CAT = c; try { aplicarClubes(c); } catch (e) { console.warn("Catálogo (clubes):", e && e.message); }
+  CAT = c; try { if (window.Aud && Aud.setEfeito && c) Aud.setEfeito(c.efeitoEstadio !== false, typeof c.efeitoNivel === "number" ? c.efeitoNivel : 100); } catch (e) { /* */ }
+  try { aplicarClubes(c); } catch (e) { console.warn("Catálogo (clubes):", e && e.message); }
   try { mostraAviso(c); } catch (e) { /* */ }
 }
 function init() {
