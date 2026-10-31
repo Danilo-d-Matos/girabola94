@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Girabola 94 · Administração</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div id="login" class="login" hidden>
+  <form id="fLogin" class="card" autocomplete="on">
+    <h1>Girabola 94</h1>
+    <p class="sub">Área de administração</p>
+    <label>Endereço do servidor<input id="lApi" type="url" required placeholder="https://o-teu-servidor.exemplo.com" autocomplete="url"></label>
+    <label>Email<input id="lEmail" type="email" required autocomplete="username"></label>
+    <label>Senha<input id="lSenha" type="password" required minlength="8" autocomplete="current-password"></label>
+    <button class="btn" type="submit">Entrar</button>
+    <p id="lErro" class="erro" role="alert"></p>
+    <p class="nota">Só entram as contas de jogo listadas em <code>ADMIN_EMAILS</code> no servidor.</p>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header class="topo">
+    <button id="bMenu" class="icon" aria-label="Menu" type="button">☰</button>
+    <b class="marca">Girabola 94 · Administração</b>
+    <span class="espaco"></span>
+    <span id="tEmail" class="email"></span>
+    <button id="bSair" class="btn ghost peq" type="button">Sair</button>
+  </header>
+  <nav id="nav" class="nav" aria-label="Secções">
+    <button data-v="painel">Painel</button>
+    <button data-v="ranking">Ranking e jogadores</button>
+    <button data-v="contas">Contas</button>
+    <button data-v="partidas">Partidas</button>
+    <button data-v="musicas">Músicas</button>
+    <button data-v="clubes">Clubes</button>
+    <button data-v="config">Configuração</button>
+    <button data-v="auditoria">Auditoria</button>
+  </nav>
+  <main id="main" class="main" tabindex="-1"></main>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="admin.js"></script>
+</body>
+</html>
