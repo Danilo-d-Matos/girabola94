@@ -276,10 +276,11 @@ VISTAS.clubes = async function (m) {
 /* ---------- configuração ---------- */
 VISTAS.config = async function (m) {
   var c = await api("GET", "/admin/config"); if (atual !== "config") return; secao(m, "Configuração");
-  var av = h("textarea", { rows: 3, maxlength: 240, placeholder: "Ex.: Manutenção hoje às 22h." }), man = h("input", { type: "checkbox" }); av.value = c.aviso; man.checked = c.manutencao;
+  var av = h("textarea", { rows: 3, maxlength: 240, placeholder: "Ex.: Manutenção hoje às 22h." }), man = h("input", { type: "checkbox" }), fx = h("input", { type: "checkbox" }); av.value = c.aviso; man.checked = c.manutencao; fx.checked = c.usarFaixas;
   m.append(h("div", { class: "painel" }, h("h3", null, "Aviso aos jogadores"), h("p", { class: "nota" }, "Aparece no menu do jogo (até 240 caracteres). Deixa vazio para não mostrar nada."), av,
     h("label", { style: "display:flex;gap:10px;align-items:center;margin-top:10px" }, man, "Modo de manutenção (o aviso fica a vermelho e o online avisa que está em manutenção)"),
-    h("div", { class: "rodape" }, h("button", { class: "btn", type: "button", onclick: function () { tenta(function () { return api("PUT", "/admin/config", { aviso: av.value, manutencao: man.checked }); }, "Guardado."); } }, "Guardar"))));
+    h("h3", null, "Música"), h("label", { style: "display:flex;gap:10px;align-items:center" }, fx, "Usar as faixas carregadas como música por omissão (cada jogador pode escolher a música gerada pelo jogo nas Opções)"),
+    h("div", { class: "rodape" }, h("button", { class: "btn", type: "button", onclick: function () { tenta(function () { return api("PUT", "/admin/config", { aviso: av.value, manutencao: man.checked, usarFaixas: fx.checked }); }, "Guardado."); } }, "Guardar"))));
 };
 
 /* ---------- auditoria ---------- */

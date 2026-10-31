@@ -83,7 +83,7 @@ function escalacao(form, fonte) { var l = fonte.lineup && fonte.lineup[form]; re
 function oficial(t) {
   var b = typeof KIT_LOOKS !== "undefined" && KIT_LOOKS[t.s];
   return b ? { shirt: b.shirt, accent: b.accent, shorts: b.shorts, socks: b.socks, pattern: b.pattern | 0, custom: false }
-           : { shirt: t.c1, accent: t.c2, shorts: t.c2, socks: t.c1, pattern: 0, custom: false };
+           : { shirt: t.c1, accent: t.c2, shorts: t.c2, socks: t.c1, pattern: 0, custom: !!t.extra };      // clubes novos (catálogo) não têm equipamento oficial pintado: usam as cores
 }
 /* equipamentos alternativos de todos os clubes (criados para o jogo; não são equipamentos reais): camisola, detalhes, calções, meias, padrão */
 var ALT = {
@@ -297,7 +297,7 @@ function vistaTatica() {
 function escolherClube() {
   cenaParar(); leaveMatch();
   app.innerHTML = '<section class="screen g94-screen c94-root"><div class="c94-escolha"><button class="c94-voltar" id="clBack">' + BACK + '<span>' + (CL.team != null ? "Voltar" : "Menu") + '</span></button><h2>Escolhe o teu clube</h2>' +
-    '<div class="c94-gridclubes">' + TEAMS.map(function (t, i) { return '<button class="team" data-i="' + i + '">' + crest(i, 56) + '<div style="min-width:0"><b>' + t.n + '</b><span>Força ' + t.r + ' · ' + STYLES[t.st].n + '</span></div></button>'; }).join("") + '</div></div></section>';
+    '<div class="c94-gridclubes">' + TEAMS.slice(0, BASE_N).map(function (t, i) { return '<button class="team" data-i="' + i + '">' + crest(i, 56) + '<div style="min-width:0"><b>' + t.n + '</b><span>Força ' + t.r + ' · ' + STYLES[t.st].n + '</span></div></button>'; }).join("") + '</div></div></section>';
   document.getElementById("clBack").onclick = function () { CL.team != null ? mostrar() : showMenu(); };
   app.querySelectorAll(".team").forEach(function (b) {
     b.onclick = function () {

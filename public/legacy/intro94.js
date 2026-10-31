@@ -129,9 +129,9 @@ var CSS="#introUI{position:absolute;inset:0;pointer-events:none;z-index:6;font-f
  "#introUI .cap.on{opacity:1;transform:none}#introUI .cap b{font-size:clamp(20px,3.2vw,38px);letter-spacing:.04em;text-transform:uppercase;font-weight:700}#introUI .cap i{font-style:normal;color:#f2b705;font-weight:700;font-size:clamp(14px,2vw,22px)}"+
  "#introUI .cap small{position:absolute;top:100%;margin-top:6px;font-size:clamp(11px,1.4vw,15px);letter-spacing:.14em;color:#d8e2ee;text-transform:uppercase}"+
  "#introUI .cap img{height:clamp(28px,4vw,48px);width:auto;vertical-align:middle;margin:0 8px}"+
- "#introUI button{pointer-events:auto;position:absolute;right:16px;top:calc(9% + 12px);background:rgba(8,16,26,.72);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 16px;font:600 15px Rajdhani,'Arial Narrow',sans-serif;letter-spacing:.06em;cursor:pointer}"+
+ "#introUI button{pointer-events:auto;position:absolute;right:16px;bottom:calc(9% + 12px);background:rgba(8,16,26,.72);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 16px;font:600 15px Rajdhani,'Arial Narrow',sans-serif;letter-spacing:.06em;cursor:pointer}"+
  "#introUI button:hover,#introUI button:focus-visible{background:rgba(242,183,5,.95);color:#111;outline:none}"+
- ".intro-on .board,.intro-on .ball-player,.intro-on .rightbar,.intro-on .keys,.intro-on .zoom-ctl,.intro-on .zoom-hud{visibility:hidden}"+
+ ".intro-on .board,.intro-on .ball-player,.intro-on .rightbar,.intro-on .keys{visibility:hidden}"+
  "@media (prefers-reduced-motion:reduce){#introUI .bar,#introUI .fade,#introUI .cap{transition:none}}";
 function ensureCSS(){if(document.getElementById("introCSS"))return;var s=document.createElement("style");s.id="introCSS";s.textContent=CSS;document.head.appendChild(s)}
 function buildUI(){
@@ -312,7 +312,7 @@ function introTick(){
 function enabled(o){
   if(!o||o.mode==="tutorial")return false;
   if(PREF.intro===false||/[?&]intro=0/.test(location.search))return false;
-  if(window.__olPending||(G&&G.online))return false;                               // jogo online: o servidor comanda o arranque
+  if(window.__olPending)return false;                               // jogo online: o servidor comanda o arranque
   if(PREF.camera==="top")return false;                              // a apresentação é em 3D
   var r=R3();if(!r||!r.ok)return false;
   return true;
@@ -327,15 +327,21 @@ function introStart(o){
   G.intro=I;G.prevState=G.state;G.state="intro";G.msg="";G.msgSub="";
   CAM.pos=null;CAM.shot="";window.__cineCam={on:true,hfov:64,px:W/2,py:20,pz:Y1-6,tx:W/2,ty:12,tz:Y1+60};
   // o ecrã fica preto até o estádio e os modelos estarem prontos (fase "prep"); depois desvanece para o primeiro plano
+  document.addEventListener("keydown",onKey,true);window.addEventListener("blur",noop);
   G.crowdPulse=Math.max(G.crowdPulse||0,.22);
   // posiciona já (o primeiro fotograma nunca mostra o plantel em posição de jogo)
   placeAll(I);
 }
+function noop(){}
+function onKey(e){
+  if(!G||!G.intro)return;
+  if(e.code==="Escape"&&!G.paused){e.preventDefault();e.stopImmediatePropagation();introFinish("skip")}
+}
 function introFinish(reason){
   var I=G&&G.intro;if(!I||I.done)return;                           // idempotente
   I.done=true;
-  if(G.paused&&reason==="skip"&&typeof setPause==="function"){try{setPause(false)}catch(e){}}
   I.timers.forEach(clearTimeout);I.timers.length=0;
+  document.removeEventListener("keydown",onKey,true);window.removeEventListener("blur",noop);
   if(window.__cineCam)window.__cineCam.on=false;
   CAM.pos=CAM.tgt=null;CAM.shot="";
   var ui=I.ui;
@@ -387,15 +393,7 @@ function installHooks(){
     return _render.apply(this,arguments);
   };
   var _canPause=canPause;
-  /* Esc salta a apresentação: o tratador de teclas do jogo (captura em window) chama canPause() para a ação "pausa" logo depois de
-     marcar a tecla; aqui Esc é desviado para o salto. Qualquer outra tecla/botão de pausa continua a pausar normalmente. */
-  canPause=function(){
-    if(G&&G.state==="intro"&&G.intro&&!G.ended){
-      if(!G.paused&&input.keys&&input.keys.Escape){input.keys.Escape=false;introFinish("skip");return false}
-      return true;
-    }
-    return _canPause.apply(this,arguments);
-  };
+  canPause=function(){return (G&&G.state==="intro"&&G.intro&&!G.ended)?true:_canPause.apply(this,arguments)};
   var _setPause=setPause;
   setPause=function(v){
     var r=_setPause.apply(this,arguments);

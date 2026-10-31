@@ -29,7 +29,7 @@ function ecraPerfil() {
     '<div class="row"><button class="btn" id="oProcurar">Procurar adversário</button></div>' +
     '<div class="opt"><span class="panel-title">Jogar com um amigo</span><div class="row"><button class="btn ghost" id="oCriar">Criar sala privada</button><input id="oCodigo" maxlength="5" placeholder="CÓDIGO" style="width:120px;padding:10px;border-radius:10px;border:1px solid #4d7088;background:#0c1a2a;color:#eef4fa;font:700 18px system-ui;text-transform:uppercase;text-align:center"><button class="btn ghost" id="oEntrar">Entrar</button></div></div>' +
     '<p class="note">Sem conta: o teu perfil de convidado fica guardado neste dispositivo.</p></div>' +
-    '<div class="ol-teams"><div class="grid" id="oGrid">' + TEAMS.map(function (t, i) { return '<button class="team" data-i="' + i + '" aria-pressed="' + (i === escolhido) + '">' + crest(i, 64) + '<div style="min-width:0"><b>' + t.n + '</b><span>Força ' + t.r + '</span></div></button>'; }).join("") + '</div></div></div></section>';
+    '<div class="ol-teams"><div class="grid" id="oGrid">' + TEAMS.slice(0, BASE_N).map(function (t, i) { return '<button class="team" data-i="' + i + '" aria-pressed="' + (i === escolhido) + '">' + crest(i, 64) + '<div style="min-width:0"><b>' + t.n + '</b><span>Força ' + t.r + '</span></div></button>'; }).join("") + '</div></div></div></section>';
   var marcar = function () { app.querySelectorAll("#oGrid .team").forEach(function (b) { b.setAttribute("aria-pressed", +b.dataset.i === escolhido); b.style.outline = +b.dataset.i === escolhido ? "3px solid #f6c744" : ""; }); };
   marcar();
   app.querySelectorAll("#oGrid .team").forEach(function (b) { b.onclick = function () { escolhido = +b.dataset.i; marcar(); try { sfx("ui"); } catch (e) {} }; });

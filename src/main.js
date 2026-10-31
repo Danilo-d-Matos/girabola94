@@ -47,6 +47,7 @@ const scripts = [
   "legacy/audio-menu.js",
   "legacy/var-system.js",
   "legacy/intro94.js",
+  "legacy/catalogo94.js",
   "legacy/fit-engine.js",
   "modelos/multidao.js",
   "legacy/crowd-hooks.js",

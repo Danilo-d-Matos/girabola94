@@ -200,13 +200,14 @@ function tick(){
   var inGame=typeof G!=="undefined"&&!!G,snd=!!PREF.sound;
   master.gain.setTargetAtTime(snd?1:0,c.currentTime,.05);
   sfxBus.gain.setTargetAtTime(nv("sfxVol",.9),c.currentTime,.1);
-  var style=PREF.musicStyle||"auto",target=null,mv=nv("musicVol",.6),ctx=inGame?(G.paused?"pause":G.tut?"tutorial":"match"):"menu",mult=1;
+  var style=PREF.musicStyle||"auto",faixas=!!(window.G94Faixas&&G94Faixas.ativo()),target=null,mv=nv("musicVol",.6),ctx=inGame?(G.paused?"pause":G.tut?"tutorial":"match"):"menu",mult=1;
+  if(style==="gerada"||style==="faixas")style="auto";
   if(style!=="off"){
     if(style==="auto")target={menu:document.querySelector(".menu-screen")?"kizomba":"semba",pause:"semba",tutorial:"semba",match:"kuduro"}[ctx];else target=style;
   }
   if(ctx==="match"||ctx==="tutorial"){var gm=PREF.gameMusic||"low";mult=gm==="off"?0:gm==="normal"?.5:.2;if(G&&G.state==="goal")mult*=.25}
   else if(ctx==="pause")mult=.7;
-  if(mult===0||!snd)target=null;
+  if(mult===0||!snd||faixas)target=null;      // com faixas do servidor ativas, não se gera música sintética
   if(target!==(M.pending||M.style))setStyle(target);
   musicBus.gain.setTargetAtTime(mv*mult,c.currentTime,.4);
   if(!inGame)crowdBus.gain.setTargetAtTime(0,c.currentTime,.3);
