@@ -113,7 +113,7 @@ function volumeAlvo() {
   if (contexto() === "jogo") { var gm = PREF.gameMusic || "low"; mult = gm === "off" ? 0 : gm === "normal" ? .5 : .2; }
   return Math.round(Math.max(0, Math.min(1, mv * mult)) * 100);
 }
-var TEMPO = 8000, tAviso = null; /* o título da música aparece este tempo (ms) e desaparece */
+var TEMPO_FAIXA = 60000, tFaixa = null, TEMPO = 8000, tAviso = null; /* o título da música aparece este tempo (ms) e desaparece */
 function anuncia(txt) {
   if (!card) return; card.querySelector("#g94MusicaTit").textContent = "♪ " + txt + (gesto ? "" : "  ·  toca no ecrã para ouvir");
   var br = card.querySelector("#g94MusicaBarra"); br.style.transition = "none"; br.style.transform = "scaleX(1)"; void br.offsetWidth;
@@ -133,6 +133,7 @@ function criaCartao() {
   return card;
 }
 function parar(sim) {
+  if (sim) clearTimeout(tFaixa);
   parado = !!sim; try { sessionStorage.setItem("g94.musica.parada", sim ? "1" : "0"); } catch (e) { /* */ }
   if (sim) { try { if (yt && yt.pauseVideo) yt.pauseVideo(); if (spCtl) spCtl.pause(); } catch (e) { /* */ } if (card) { card.remove(); card = null; if (oculto) oculto.remove(); oculto = null; yt = null; ytPronto = false; spCtl = null; atualId = ""; } }
 }
@@ -156,6 +157,8 @@ document.addEventListener("pointerdown", aoGesto, true); document.addEventListen
 function mostra() {
   var l = faixasDoContexto(contexto()); if (!l.length) return;
   var f = l[idx % l.length]; if (atualId === f.id && card) return; atualId = f.id;
+  /* cada música toca no máximo 1 minuto e passa à seguinte (se a música acabar antes, passa logo) */
+  clearTimeout(tFaixa); tFaixa = setTimeout(function () { muda(1); }, TEMPO_FAIXA);
   criaCartao();
   var corpo = oculto, nota = {}; anuncia(f.titulo);
   corpo.textContent = ""; yt = null; ytPronto = false; spCtl = null;
