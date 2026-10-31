@@ -276,7 +276,7 @@ VISTAS.musicas = async function (m) {
         fn: async function () { var r = await acao({ sucesso: "Música guardada.", fazer: function () { return api("PUT", "/admin/musicas/" + l.id, { titulo: t.value, artista: a.value, uso: u.value }); } }); if (r === undefined) return false; carregar(); } }]);
   }
   secao(m, "Músicas");
-  var link = h("input", { type: "url", placeholder: "https://www.youtube.com/watch?v=… ou https://open.spotify.com/track/…", maxlength: 300, autocomplete: "off" }),
+  var link = h("input", { type: "url", placeholder: "https://www.youtube.com/watch?v=…", maxlength: 300, autocomplete: "off" }),
     t = h("input", { placeholder: "Título", maxlength: 80 }), a = h("input", { placeholder: "Artista (opcional)", maxlength: 80 }), u = h("select", null, Object.keys(USO).map(function (k) { return h("option", { value: k }, USO[k]); })),
     previa = h("div", { class: "previa", hidden: true }), estado = h("p", { class: "nota", role: "status" }), ok = h("button", { class: "btn", type: "submit", disabled: true }, "Adicionar à lista"), verif = h("button", { class: "btn ghost", type: "button" }, "Verificar ligação"), lido = null;
   async function verificar() {
@@ -296,7 +296,7 @@ VISTAS.musicas = async function (m) {
   /* ao colar ou escrever uma ligação, é verificada sozinha e o título e o artista são preenchidos */
   link.addEventListener("input", function () { ok.disabled = true; lido = null; previa.hidden = true; clearTimeout(tmp); if (/^https?:\/\/\S{8,}/i.test(link.value.trim())) { estado.textContent = "A ler a ligação…"; tmp = setTimeout(verificar, 600); } else estado.textContent = ""; });
   var form = h("form", { class: "painel" }, h("h3", null, "Adicionar música por ligação"),
-    h("p", { class: "nota" }, "Cola uma ligação do YouTube (vídeo ou lista) ou do Spotify (faixa, álbum, lista ou episódio): o título e o artista são preenchidos sozinhos (podes corrigi-los). O jogo toca só o áudio e mostra o título durante uns segundos. Usa só conteúdo que podes divulgar."),
+    h("p", { class: "nota" }, "Cola uma ligação do YouTube (vídeo ou lista): o título e o artista são preenchidos sozinhos (podes corrigi-los). O jogo toca só o áudio e mostra o título durante uns segundos. Usa só conteúdo que podes divulgar."),
     h("label", null, "Ligação", link), h("div", { class: "barra" }, verif, estado), previa,
     h("div", { class: "linha3" }, h("label", null, "Título", t), h("label", null, "Artista", a), h("label", null, "Usar em", u)), h("div", { class: "rodape" }, ok));
   form.addEventListener("submit", async function (e) {

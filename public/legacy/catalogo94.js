@@ -97,8 +97,8 @@ try { parado = sessionStorage.getItem("g94.musica.parada") === "1"; } catch (e) 
 function contexto() { return typeof G !== "undefined" && G ? "jogo" : "menu"; }
 /* músicas de fundo por omissão: valem enquanto o servidor não definir outras (ou se não houver servidor) */
 var PADRAO = [
-  { id: "padrao1", titulo: "Dança Dos Combas", artista: "Bruno M", uso: "ambos", plataforma: "spotify", tipo: "track", ref: "0iW1McQ8pRN4EUkU82GDVa" },
-  { id: "padrao2", titulo: "Comboio II", artista: "Os Lambas", uso: "ambos", plataforma: "spotify", tipo: "track", ref: "7JRFfBG64rc0Zj7oDWobTg" }
+  { id: "padrao1", titulo: "Dança Dos Combas", artista: "Bruno M", uso: "ambos", plataforma: "youtube", tipo: "video", ref: "6mhF9shs4bk" },
+  { id: "padrao2", titulo: "Comboio II", artista: "Os Lambas", uso: "ambos", plataforma: "youtube", tipo: "video", ref: "9NL9c98f8J4" }
 ];
 function todas() { return CAT ? (CAT.musicas || []) : PADRAO; }
 function faixasDoContexto(ct) { return todas().filter(function (m) { return m.uso === "ambos" || m.uso === ct; }); }
