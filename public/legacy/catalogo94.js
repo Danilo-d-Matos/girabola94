@@ -98,7 +98,7 @@ function contexto() { return typeof G !== "undefined" && G ? "jogo" : "menu"; }
 /* músicas de fundo por omissão: valem enquanto o servidor não definir outras (ou se não houver servidor) */
 var PADRAO = [
   { id: "padrao1", titulo: "Dança Dos Combas", artista: "Bruno M", uso: "ambos", plataforma: "youtube", tipo: "video", ref: "6mhF9shs4bk" },
-  { id: "padrao2", titulo: "Comboio II", artista: "Os Lambas", uso: "ambos", plataforma: "youtube", tipo: "video", ref: "9NL9c98f8J4" }
+  { id: "padrao2", titulo: "Comboio II", artista: "Os Lambas", uso: "ambos", plataforma: "youtube", tipo: "video", ref: "_VZ7JGqZZi4" }
 ];
 function todas() { return CAT ? (CAT.musicas || []) : PADRAO; }
 function faixasDoContexto(ct) { return todas().filter(function (m) { return m.uso === "ambos" || m.uso === ct; }); }
