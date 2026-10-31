@@ -109,7 +109,7 @@ function ativo() {
   return s === "faixas" || (s === "auto" && !(CAT && CAT.usarFaixas === false));
 }
 function volumeAlvo() {
-  var mv = typeof PREF.musicVol === "number" ? PREF.musicVol : .45, mult = 1;
+  var mv = typeof PREF.musicVol === "number" ? PREF.musicVol : .3, mult = 1;
   if (contexto() === "jogo") { var gm = PREF.gameMusic || "low"; mult = gm === "off" ? 0 : gm === "normal" ? .5 : .2; }
   return Math.round(Math.max(0, Math.min(1, mv * mult)) * 100);
 }
