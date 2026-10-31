@@ -286,20 +286,24 @@ VISTAS.musicas = async function (m) {
     try {
       var r = await api("POST", "/admin/musicas/previa", { url: link.value.trim() }); lido = r;
       previa.append(r.miniatura ? h("img", { src: r.miniatura, alt: "", referrerpolicy: "no-referrer" }) : null, h("div", null, h("b", null, (PLAT[r.plataforma] || r.plataforma) + " · " + (TIPO[r.tipo] || r.tipo)), h("div", null, r.titulo || "(sem título automático — escreve-o abaixo)"), r.artista ? h("div", { class: "nota" }, r.artista) : null));
-      previa.hidden = false; if (!t.value && r.titulo) t.value = r.titulo; if (!a.value && r.artista) a.value = r.artista; ok.disabled = false; estado.textContent = "Ligação reconhecida.";
+      previa.hidden = false; if ((!t.value || !tMao) && r.titulo) t.value = r.titulo; if ((!a.value || !aMao) && r.artista) a.value = r.artista; if (!r.titulo) t.focus(); ok.disabled = false; estado.textContent = "Ligação reconhecida.";
     } catch (e) { if (e.message !== "Sessão terminada.") await popup("erro", "Ligação inválida", e.message); }
     verif.disabled = false; verif.textContent = "Verificar ligação";
   }
-  verif.addEventListener("click", verificar); link.addEventListener("input", function () { ok.disabled = true; lido = null; });
+  var tMao = false, aMao = false, tmp = null;
+  t.addEventListener("input", function () { tMao = true; }); a.addEventListener("input", function () { aMao = true; });
+  verif.addEventListener("click", verificar);
+  /* ao colar ou escrever uma ligação, é verificada sozinha e o título e o artista são preenchidos */
+  link.addEventListener("input", function () { ok.disabled = true; lido = null; previa.hidden = true; clearTimeout(tmp); if (/^https?:\/\/\S{8,}/i.test(link.value.trim())) { estado.textContent = "A ler a ligação…"; tmp = setTimeout(verificar, 600); } else estado.textContent = ""; });
   var form = h("form", { class: "painel" }, h("h3", null, "Adicionar música por ligação"),
-    h("p", { class: "nota" }, "Cola uma ligação do YouTube (vídeo ou lista) ou do Spotify (faixa, álbum, lista ou episódio). O jogo mostra o leitor oficial da plataforma num cartão no canto do ecrã: no YouTube o volume segue a opção «Música»; no Spotify o jogador carrega em ▶ e ajusta o volume no leitor. Usa só conteúdo que podes divulgar."),
+    h("p", { class: "nota" }, "Cola uma ligação do YouTube (vídeo ou lista) ou do Spotify (faixa, álbum, lista ou episódio): o título e o artista são preenchidos sozinhos (podes corrigi-los). O jogo toca só o áudio e mostra o título durante uns segundos. Usa só conteúdo que podes divulgar."),
     h("label", null, "Ligação", link), h("div", { class: "barra" }, verif, estado), previa,
     h("div", { class: "linha3" }, h("label", null, "Título", t), h("label", null, "Artista", a), h("label", null, "Usar em", u)), h("div", { class: "rodape" }, ok));
   form.addEventListener("submit", async function (e) {
     e.preventDefault(); if (!lido) { await verificar(); if (!lido) return; }
     if (t.value.trim().length < 2) { await popup("aviso", "Falta preencher", "Indica o título da música."); return; }
     var r = await acao({ titulo: "Adicionar música", texto: ["Adicionar «" + t.value.trim() + "» (" + (PLAT[lido.plataforma] || lido.plataforma) + ") à lista de músicas do jogo?", "Passa a tocar para todos os jogadores no arranque seguinte."], rotulo: "Adicionar", sucesso: "Música adicionada.", fazer: function () { return api("POST", "/admin/musicas", { url: link.value.trim(), titulo: t.value, artista: a.value, uso: u.value }); } });
-    if (r) { form.reset(); previa.hidden = true; previa.textContent = ""; lido = null; ok.disabled = true; estado.textContent = ""; carregar(); }
+    if (r) { form.reset(); tMao = aMao = false; previa.hidden = true; previa.textContent = ""; lido = null; ok.disabled = true; estado.textContent = ""; carregar(); }
   });
   var lista = h("div"); m.append(form, lista); await carregar();
 };
