@@ -688,10 +688,13 @@ function skinMat(base,hex){const k=base.uuid+"|"+hex;if(_sk[k])return _sk[k];con
   m.onBeforeCompile=function(sh){sh.fragmentShader=sh.fragmentShader.replace("#include <map_fragment>","#include <map_fragment>\n#ifdef USE_MAP\n{float lu=dot(diffuseColor.rgb,vec3(.299,.587,.114));vec3 ch=diffuseColor.rgb/(lu+.0001);float sk=(1.0-smoothstep(.14,.5,length(ch-vec3(1.34,.84,.55))))*smoothstep(.035,.09,lu);float rt=lu/.2635;vec3 tgt="+tone+"*(rt/(1.0+.4*max(rt-1.0,.0)));diffuseColor.rgb=mix(diffuseColor.rgb,tgt,sk);}\n#endif")};
   m.customProgramCacheKey=function(){return"skin"+hex};const u=base.map&&base.map.userData;if(u&&u.ready===false){m.visible=false;(u.mats=u.mats||[]).push(m)}else m.visible=true;return _sk[k]=m}
 /* cabelo, sobrancelhas e barba em unidades do mundo, no referencial do osso da cabeça (origem junto ao maxilar, y para cima, z para a frente) */
+/* cabelo, sobrancelhas e barba em geometria própria: desligados (o jogador volta a ter o cabelo pintado no modelo). Pôr true para os reativar. */
+const CABELO_3D=false;
 function buildHair(h,v,look){
   const g=h.gl,bone=g.bones&&g.bones.Head;if(!bone)return;
   if(!g.hair){g.hair=new T.Group();g.hair.scale.setScalar(1/GLBM.scale);bone.add(g.hair)}
   const gr=g.hair;while(gr.children.length)gr.remove(gr.children[0]);
+  if(!CABELO_3D)return;
   const hm=hmat(v.hairCol),cap=(r,th,y,z,rx,sy)=>hmesh(hgeo("cap"+r+"_"+th,()=>new T.SphereGeometry(r,18,12,0,Math.PI*2,0,th)),hm,0,y,z,.92,sy||1.02,.97,rx);
   const skinC=skinTint(v.tone).clone().multiply(new T.Color(.353,.220,.145)).multiplyScalar(1.1);
   switch(v.hair){
