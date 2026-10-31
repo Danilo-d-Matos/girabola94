@@ -476,10 +476,13 @@ function show(why){
    '<button id="bgReset" style="padding:11px 18px;border:1px solid #4d7088;border-radius:8px;background:transparent;color:#eef4fa;cursor:pointer">Limpar dados guardados e recarregar</button></div>'+
    '<p style="margin:12px 0 0;font-size:13px;color:#9fb4c4">Dica: abra o jogo com <b>npm run dev</b> (pasta html) e <b>http://localhost:5173</b>, ou num navegador atualizado (Chrome, Edge ou Firefox recentes).</p></div>';
   document.body.appendChild(d);
+  /* se o jogo acabar por arrancar (carregamento lento), o aviso desaparece sozinho */
+  var vigia=setInterval(function(){if(ready()){clearInterval(vigia);d.remove();shown=false}},700);
   document.getElementById("bgReload").onclick=function(){location.reload()};
   document.getElementById("bgReset").onclick=function(){try{localStorage.clear();sessionStorage.clear()}catch(e){}location.reload()};
 }
-addEventListener("load",function(){setTimeout(function(){if(!ready())show("O menu não apareceu depois de a página carregar.")},2500)});
+/* em ligações lentas o jogo demora a descarregar: só se avisa passado muito tempo (ou antes, se houve um erro) */
+addEventListener("load",function(){setTimeout(function(){if(!ready())show("O menu não apareceu depois de a página carregar.")},20000)});
 setTimeout(function(){if(errs.length&&!ready())show("Ocorreu um erro ao iniciar o jogo.")},1800);
 })();
 </script>
