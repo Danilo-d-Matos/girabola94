@@ -212,7 +212,7 @@ function tick(){
   var inGame=typeof G!=="undefined"&&!!G,snd=!!PREF.sound;
   master.gain.setTargetAtTime(snd?1:0,c.currentTime,.05);
   sfxBus.gain.setTargetAtTime(nv("sfxVol",.9),c.currentTime,.1);
-  var style=PREF.musicStyle||"auto",faixas=!!(window.G94Faixas&&G94Faixas.ativo()),target=null,mv=nv("musicVol",.75),ctx=inGame?(G.paused?"pause":G.tut?"tutorial":"match"):"menu",mult=1;
+  var style=PREF.musicStyle||"auto",faixas=!!(window.G94Faixas&&G94Faixas.ativo()),target=null,mv=nv("musicVol",.45),ctx=inGame?(G.paused?"pause":G.tut?"tutorial":"match"):"menu",mult=1;
   if(style==="gerada"||style==="faixas")style="auto";
   if(style!=="off"){
     if(style==="auto")target={menu:document.querySelector(".menu-screen")?"kizomba":"semba",pause:"semba",tutorial:"semba",match:"kuduro"}[ctx];else target=style;
@@ -251,7 +251,7 @@ function seg(label,key,items,def){var d=document.createElement("div");d.classNam
 function injectOptions(){
   var o=document.querySelector(".options-screen");if(!o||o.querySelector(".aud-panel"))return;
   var p=document.createElement("div");p.className="panel aud-panel";p.innerHTML='<p class="panel-title">Som e música</p>';
-  p.appendChild(slider("Efeitos","sfxVol",.9));if(window.MenuSfx)MenuSfx.options(p);p.appendChild(slider("Bola","ballVol",1));p.appendChild(slider("Árbitro","refVol",1));p.appendChild(slider("Adeptos","crowdVol",.8));p.appendChild(slider("Música","musicVol",.75));
+  p.appendChild(slider("Efeitos","sfxVol",.9));if(window.MenuSfx)MenuSfx.options(p);p.appendChild(slider("Bola","ballVol",1));p.appendChild(slider("Árbitro","refVol",1));p.appendChild(slider("Adeptos","crowdVol",.8));p.appendChild(slider("Música","musicVol",.45));
   var n=document.createElement("p");n.className="note";n.textContent="A bola, os apitos e os adeptos usam gravações; a música e os sons de interface são gerados pelo jogo. O público reage aos remates, defesas, golos e faltas.";p.appendChild(n);
   o.appendChild(p);
 }
