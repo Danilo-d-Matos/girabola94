@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="pt"><head><meta charset="utf-8"><title>Gerar elenco 15</title>
+<style>body{margin:0;background:#1b1f24;color:#ddd;font:13px sans-serif}#log{position:fixed;left:8px;top:8px;white-space:pre;z-index:2;text-shadow:0 0 3px #000}canvas{display:block}</style></head>
+<body><div id="log"></div>
+<script type="module">
+/* Gera public/modelos/elenco15.glb: 15 jogadores (1 guarda-redes + 14 de campo), esqueleto próprio por jogador,
+   todas as animações do jogador-base, pele/cabelo/barba/rosto cozidos (sem shaders), equipamento com atlas e malha de tecido.
+   Reutiliza as regras de variedade de html/public/legacy/gl3d.js. */
+import * as T from "three";
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
+import {GLTFExporter} from "three/examples/jsm/exporters/GLTFExporter.js";
+import * as SU from "three/examples/jsm/utils/SkeletonUtils.js";
+
+const log=(s)=>{document.getElementById("log").textContent+=s+"\n";console.log(s)};
+const Q=new URLSearchParams(location.search);
+const H_GAME=27, TEAM="petro_luanda";
+const loadImg=(u)=>new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ko(new Error("img "+u));i.src=u});
+const rngSeed=(s)=>{let a=s>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}};
+
+/* ---------- elenco: 14 negros (9 tons, estilos distintos) + 1 branco ---------- */
+const CAST=[
+ {n:1, gk:1, tone:"#3d261a",hair:"fade",   beard:"full",   hc:"#0d0b0a",brow:"grossa"},
+ {n:2,       tone:"#5f3a25",hair:"short",  beard:null,     hc:"#0d0d0d",brow:"normal"},
+ {n:3,       tone:"#2c1a12",hair:"braids", beard:"stubble",hc:"#0d0b0a",brow:"normal"},
+ {n:4,       tone:"#774b30",hair:"afro",   beard:"mustache+goatee",hc:"#14100c",brow:"arqueada"},
+ {n:5,       tone:"#47291c",hair:"bald",   beard:"full",   hc:"#a9a9a9",brow:"grossa"},
+ {n:6,       tone:"#8a5a3b",hair:"curly",  beard:"stubble",hc:"#1e150f",brow:"fina"},
+ {n:7,       tone:"#34201a",hair:"mohawk", beard:null,     hc:"#14100c",brow:"normal"},
+ {n:8,       tone:"#684229",hair:"flat",   beard:"goatee", hc:"#0d0d0d",brow:"grossa"},
+ {n:9,       tone:"#573523",hair:"band",   beard:null,     hc:"#2b1d12",brow:"arqueada"},
+ {n:10,      tone:"#3d261a",hair:"riscado",beard:"mustache",hc:"#0d0b0a",brow:"fina"},
+ {n:11, branco:1,tone:"#dcab8d",hair:"short",beard:"stubble",hc:"#5a3d22",brow:"normal"},
+ {n:12,      tone:"#2c1a12",hair:"fade",   beard:null,     hc:"#0d0d0d",brow:"normal"},
+ {n:14,      tone:"#774b30",hair:"braids", beard:"full",   hc:"#14100c",brow:"grossa"},
+ {n:17,      tone:"#5f3a25",hair:"afro",   beard:"stubble",hc:"#1e150f",brow:"arqueada"},
+ {n:20,      tone:"#8a5a3b",hair:"bald",   beard:"goatee", hc:"#0d0b0a",brow:"fina"},
+];
+const GK_KIT={shirt:"#22c3b5",accent:"#0a5c8a",shorts:"#1d1d1d",socks:"#1d1d1d",pattern:4};
+
+/* ---------- carregar base ---------- */
+const gl=await new Promise((ok,ko)=>new GLTFLoader().load("/modelos/jogador.glb",ok,undefined,ko));
+const proto=gl.scene, clips=gl.animations;
+proto.updateMatrixWorld(true);
+const bb=new T.Box3().setFromObject(proto), MH=bb.max.y-bb.min.y, GS=H_GAME/MH;   // GS: unidades do jogo por metro
+log("altura base "+MH.toFixed(3)+" m; clips "+clips.length);
+
+const imgAtlas=await loadImg("/modelos/equipas/"+TEAM+".jpg");
+const imgEmb=await loadImg("/modelos/emblemas/"+TEAM+".png");
+const imgNum=await loadImg("/modelos/equipas/num_"+TEAM+".png");
+const imgNC=await loadImg("/modelos/tecido/malha_camisola_n.png");
+const imgNS=await loadImg("/modelos/tecido/malha_calcoes_n.png");
+const W2=2048,H2=1024;
+
+/* ---------- texturas partilhadas ---------- */
+const mkTex=(src,cs,rep)=>{const t=new T.Texture(src);t.flipY=false;t.colorSpace=cs||T.NoColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;if(rep)t.repeat.set(rep[0],rep[1]);t.needsUpdate=true;return t};
+const nCam=mkTex(imgNC,T.NoColorSpace,[16,8]), nCal=mkTex(imgNS,T.NoColorSpace,[22,11]);
+const numTex=mkTex(imgNum,T.SRGBColorSpace);numTex.wrapS=numTex.wrapT=T.ClampToEdgeWrapping;
+const canvasOf=(img)=>{const c=document.createElement("canvas");c.width=W2;c.height=H2;const q=c.getContext("2d");q.drawImage(img,0,0,W2,H2);return c};
+const baseCanvas=canvasOf(imgAtlas);
+const baseData=baseCanvas.getContext("2d").getImageData(0,0,W2,H2);
+const jpegTex=(c)=>{const t=new T.CanvasTexture(c);t.flipY=false;t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.userData.mimeType="image/jpeg";return t};
+
+/* atlas do guarda-redes: pinta camisola/calções/meias sobre os triângulos UV, como o jogo faz */
+const KIT_REGIOES=[[.093,.249,.115,.39],[.459,.591,.115,.39],[.728,.79,.2,.39],[.825,.893,.2,.39]];
+function kitPatDraw(c,p,w,h,col){c.fillStyle=col;const poly=(pts)=>{c.beginPath();pts.forEach((q,i)=>i?c.lineTo(q[0]*w,q[1]*h):c.moveTo(q[0]*w,q[1]*h));c.closePath();c.fill()};
+ switch(p){case 4:poly([[0,0],[.24,0],[.72,1],[.48,1]]);poly([[1,0],[.76,0],[.28,1],[.52,1]]);break;case 9:for(let i=0;i<8;i+=2)c.fillRect(0,i*h/8,w,h/8);break;case 3:c.fillRect(0,h*.4,w,h*.2);break}}
+function uvPaths(){const out={};proto.traverse(o=>{if(!o.isMesh||!["Camisola","Calcoes","Meias"].includes(o.name))return;const uv=o.geometry.attributes.uv,ix=o.geometry.index,p=new Path2D();for(let t=0;t<ix.count;t+=3){const a=ix.getX(t),b=ix.getX(t+1),d=ix.getX(t+2);p.moveTo(uv.getX(a)*W2,uv.getY(a)*H2);p.lineTo(uv.getX(b)*W2,uv.getY(b)*H2);p.lineTo(uv.getX(d)*W2,uv.getY(d)*H2);p.closePath()}out[o.name]=p});return out}
+function gkAtlas(){const cv=canvasOf(imgAtlas),c=cv.getContext("2d"),P=uvPaths(),k=GK_KIT;
+ const fill=(n,col,ex)=>{const p=P[n];c.fillStyle=col;c.strokeStyle=col;c.lineWidth=3;c.fill(p);c.stroke(p);if(ex){c.save();c.clip(p);ex();c.restore()}};
+ fill("Camisola",k.shirt,()=>{for(const r of KIT_REGIOES){c.save();c.translate(r[0]*W2,r[2]*H2);const w=(r[1]-r[0])*W2,h=(r[3]-r[2])*H2;c.beginPath();c.rect(0,0,w,h);c.clip();kitPatDraw(c,k.pattern,w,h,k.accent);c.restore()}});
+ fill("Calcoes",k.shorts);fill("Meias",k.socks);
+ const r=Math.min(54/imgEmb.naturalWidth,54/imgEmb.naturalHeight);c.drawImage(imgEmb,390-imgEmb.naturalWidth*r/2,206-imgEmb.naturalHeight*r/2,imgEmb.naturalWidth*r,imgEmb.naturalHeight*r);
+ return cv}
+
+/* pele: mesma remapeamento por luminância do jogo (só pixéis com cromaticidade de pele), cozido na textura */
+const lin=(v)=>v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4), enc=(v)=>v<=.0031308?v*12.92:1.055*Math.pow(v,1/2.4)-.055;
+const sstep=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
+function skinAtlas(srcData,hex){
+ const tc=new T.Color(hex), tone=[tc.r,tc.g,tc.b];   // lineares
+ const out=new ImageData(new Uint8ClampedArray(srcData.data),W2,H2),d=out.data;
+ for(let i=0;i<d.length;i+=4){
+  const r=d[i]/255,g=d[i+1]/255,b=d[i+2]/255,lu=r*.299+g*.587+b*.114,k=1/(lu+.0001);
+  const dx=r*k-1.34,dy=g*k-.84,dz=b*k-.55,sk=(1-sstep(.14,.5,Math.hypot(dx,dy,dz)))*sstep(.035,.09,lu);
+  if(sk<.003)continue;
+  const rt=lu/.2635,m=rt/(1+.4*Math.max(rt-1,0));
+  d[i]=Math.round(255*(r+(enc(Math.min(1,tone[0]*m))-r)*sk));
+  d[i+1]=Math.round(255*(g+(enc(Math.min(1,tone[1]*m))-g)*sk));
+  d[i+2]=Math.round(255*(b+(enc(Math.min(1,tone[2]*m))-b)*sk));
+ }
+ const c=document.createElement("canvas");c.width=W2;c.height=H2;c.getContext("2d").putImageData(out,0,0);return c}
+
+/* ---------- deformação do rosto (porta de prepHeadMorph/applyHeadMorph) ---------- */
+function plainGeo(og){const g=new T.BufferGeometry();for(const k in og.attributes){const a=og.attributes[k],n=a.count,s=a.itemSize,arr=new a.array.constructor(n*s);for(let i=0;i<n;i++)for(let j=0;j<s;j++)arr[i*s+j]=[a.getX,a.getY,a.getZ,a.getW][j].call(a,i);g.setAttribute(k,new T.BufferAttribute(arr,s,a.normalized))}if(og.index)g.setIndex(new T.BufferAttribute(og.index.array.slice(),1));return g}
+function headMorph(root,meshes,bones,f){
+ root.updateMatrixWorld(true);const mesh=meshes.Cabeca,bone=bones.Head;mesh.skeleton.update();
+ const pos=mesh.geometry.attributes.position,orig=pos.array.slice(),n=pos.count,loc=new Float32Array(n*3),inv=new T.Matrix4().copy(bone.matrixWorld).invert(),v=new T.Vector3(),sc=GS;
+ for(let i=0;i<n;i++){mesh.getVertexPosition(i,v);v.applyMatrix4(mesh.matrixWorld).applyMatrix4(inv);loc[i*3]=v.x*sc;loc[i*3+1]=v.y*sc;loc[i*3+2]=v.z*sc}
+ const A=new T.Matrix4().copy(inv).multiply(mesh.matrixWorld);A.premultiply(new T.Matrix4().makeScale(sc,sc,sc));
+ const M3=new T.Matrix3().setFromMatrix4(A.clone().invert());
+ const gs=(y,c,s)=>Math.exp(-((y-c)/s)*((y-c)/s)),sm=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
+ const d=new T.Vector3(),arr=pos.array;
+ for(let i=0;i<n;i++){const x=loc[i*3],y=loc[i*3+1],z=loc[i*3+2];let dx=0,dy=0,dz=0;
+  const front=sm(-.3,.9,z),face=sm(-.7,-.1,y)*front,ax=Math.abs(x);
+  dx+=x*f.fw*face;dx+=x*f.jaw*gs(y,-.1,.55)*front;
+  dz+=f.chin*gs(y,-.3,.4)*front;dy+=f.chinY*gs(y,-.35,.3)*front;
+  dz+=f.nose*gs(y,.95,.4)*gs(x,0,.55)*front;dx+=x*f.noseW*gs(y,.8,.3)*gs(x,0,.6)*front;dy+=f.noseL*gs(y,.8,.4)*gs(x,0,.5)*front;
+  dz+=f.lips*gs(y,.35,.25)*gs(x,0,.7)*front;
+  dx+=x*f.cheek*gs(y,1.0,.45)*sm(.5,1.2,ax)*front;dz+=f.cheek*.5*gs(y,1.0,.4)*sm(.4,1.1,ax)*front;
+  dz+=f.brow*gs(y,1.85,.3)*front;
+  d.set(dx,dy,dz).applyMatrix3(M3);arr[i*3]=orig[i*3]+d.x;arr[i*3+1]=orig[i*3+1]+d.y;arr[i*3+2]=orig[i*3+2]+d.z}
+ pos.needsUpdate=true;mesh.geometry.computeVertexNormals();
+}
+
+/* ---------- cabelo, sobrancelhas, barba (porta de buildHair), em unidades do jogo dentro do osso Head ---------- */
+const stdm=(c,o)=>new T.MeshStandardMaterial(Object.assign({color:c,roughness:.92,metalness:0},o||{}));
+const hmats={};const hmat=(c,e)=>hmats[c+e]||(hmats[c+e]=stdm(c,{emissive:e||0x0a0a0a,name:"Cabelo_"+c}));
+const geos={};const hgeo=(k,fn)=>geos[k]||(geos[k]=fn());
+function hmesh(geo,mat,x,y,z,sx,sy,sz,rx,name){const m=new T.Mesh(geo,mat);m.position.set(x,y,z);if(sx!=null)m.scale.set(sx,sy,sz);if(rx)m.rotation.x=rx;if(name)m.name=name;return m}
+function skinTintLin(hex){return new T.Color(hex)}
+function buildHair(headBone,v,gkLike){
+ const gr=new T.Group();gr.name="Cabelo_e_barba";gr.scale.setScalar(1/GS);headBone.add(gr);
+ const hm=hmat(v.hc),cap=(r,th,y,z,rx,sy)=>hmesh(hgeo("cap"+r+"_"+th,()=>new T.SphereGeometry(r,24,16,0,Math.PI*2,0,th)),hm,0,y,z,.92,sy||1.02,.97,rx,"Cabelo_"+v.hair);
+ const skinC=new T.Color(v.tone).multiply(new T.Color(.353,.220,.145)).multiplyScalar(4.4*0+1.1).clone();
+ const bare=new T.Color(v.tone).multiplyScalar(.95);
+ switch(v.hair){
+  case"short":gr.add(cap(1.86,1.35,1.5,-.12,-.45));break;
+  case"fade":gr.add(cap(1.8,1.25,1.52,-.08,-.4));break;
+  case"bald":break;                         // rapado: a pele da cabeça é a do rosto (sem malha extra)
+  case"afro":gr.add(hmesh(hgeo("afro",()=>new T.SphereGeometry(2.4,28,20)),hm,0,2.95,-.5,1,.92,.88,0,"Cabelo_afro"));break;
+  case"curly":gr.add(hmesh(hgeo("curly",()=>new T.SphereGeometry(2.0,28,20)),hm,0,2.7,-.25,1,.88,.92,0,"Cabelo_cacheado"));break;
+  case"flat":gr.add(cap(1.86,1.35,1.5,-.12,-.45));gr.add(hmesh(hgeo("flat",()=>new T.BoxGeometry(2.9,1.1,2.6)),hm,0,3.65,-.3,1,1,1,0,"Cabelo_flat_top"));break;
+  case"mohawk":gr.add(cap(1.8,1.25,1.52,-.08,-.4));gr.add(hmesh(hgeo("moh",()=>new T.SphereGeometry(1,16,12)),hm,0,3.45,-.25,.34,1.1,1.7,0,"Cabelo_crista"));break;
+  case"riscado":{gr.add(cap(1.8,1.25,1.52,-.08,-.4));const sm=stdm(bare,{emissive:0x0a0a0a}),st=hgeo("risco",()=>new T.BoxGeometry(.16,.16,1.3));[[-1.15,2.55],[-1.28,2.2],[1.15,2.55]].forEach(p=>{const b=hmesh(st,sm,p[0],p[1],.35,1,1,1,0,"Cabelo_risco");b.rotation.x=-.35;b.rotation.z=(p[0]<0?.35:-.35);gr.add(b)});break}
+  case"braids":{gr.add(cap(1.86,1.35,1.5,-.12,-.45));const bg=hgeo("braid",()=>new T.CylinderGeometry(.2,.14,2.6,8));[-1.3,-.78,-.26,.26,.78,1.3].forEach(x=>{const b=hmesh(bg,hm,x*.95,.9,-1.2+Math.abs(x)*.1,1,1,1,0,"Cabelo_trança");b.rotation.x=.1;gr.add(b)});break}
+  case"band":{gr.add(cap(1.86,1.35,1.5,-.12,-.45));const band=new T.Mesh(hgeo("band",()=>new T.TorusGeometry(1.88,.28,8,28)),stdm("#f2c200",{emissive:0x101010}));band.name="Bandolete";band.rotation.x=Math.PI/2-.12;band.position.set(0,2.5,-.08);band.scale.set(.88,.88,1);gr.add(band);break}
+ }
+ const gray=v.hc==="#a9a9a9"||v.hc==="#6f6f6f",bmat=hmat(gray?"#5a5a5a":v.hc),dims={normal:[.62,.1],grossa:[.66,.16],fina:[.6,.06],arqueada:[.6,.09]}[v.brow],bg=hgeo("sob_"+v.brow,()=>new T.BoxGeometry(dims[0],dims[1],.12));
+ [-1,1].forEach(sd=>{const b=hmesh(bg,bmat,sd*.58,1.88,1.27,1,1,1,0,"Sobrancelha");b.rotation.z=sd*(v.brow==="arqueada"?-.28:-.1);b.rotation.x=-.12;gr.add(b)});
+ if(v.beard){const bm=hmat(v.hc),b=v.beard;
+  if(b==="full")gr.add(hmesh(hgeo("beardF",()=>new T.SphereGeometry(1,28,12,.1,Math.PI-.2,1.5,Math.PI-1.5)),bm,0,.15,.5,1.46,.88,.9,0,"Barba_cheia"));
+  else if(b==="stubble")gr.add(hmesh(hgeo("beardS",()=>new T.SphereGeometry(1,28,12,.1,Math.PI-.2,1.65,Math.PI-1.65)),hmat(v.hc,0x050505),0,.15,.5,1.43,.8,.86,0,"Barba_rala"));
+  if(b==="goatee"||b==="mustache+goatee")gr.add(hmesh(hgeo("goat",()=>new T.SphereGeometry(.5,14,10)),bm,0,-.28,1.2,1,1.2,.7,0,"Cavanhaque"));
+  if(b==="mustache"||b==="mustache+goatee")gr.add(hmesh(hgeo("mustache",()=>new T.BoxGeometry(1.15,.18,.22)),bm,0,.56,1.56,1,1,1,-.05,"Bigode"));
+ }
+ for(const m of gr.children){m.material.side=T.FrontSide}
+}
+
+/* ---------- montar os 15 jogadores ---------- */
+const scene=new T.Scene();scene.name="Elenco15";
+const meta=[];
+const ptex={};   // texturas por tipo
+const kitTexOut=jpegTex(baseCanvas);kitTexOut.name="Equipamento_"+TEAM;
+const gkCanvas=gkAtlas(),gkTexKit=jpegTex(gkCanvas);gkTexKit.name="Equipamento_guarda_redes";
+const cols=5,dxp=1.5,dzp=2.0;
+const heads=[];
+CAST.forEach((p,i)=>{
+ const r=rngSeed(0xA0B1+i*7919),gauss=()=>(r()+r()+r()+r()-2)*1.15,rr=()=>r()+r()-1;
+ const root=SU.clone(proto);root.name=(p.gk?"GR_":"J")+String(p.n).padStart(2,"0");
+ const meshes={},bones={};root.traverse(o=>{if(o.isSkinnedMesh||o.isMesh)meshes[o.name]=o;if(o.isBone)bones[o.name]=o});
+ // geometria própria sem atributos intercalados
+ for(const k in meshes){meshes[k].geometry=plainGeo(meshes[k].geometry)}
+ const v={...p,face:{fw:gauss()*.05,jaw:gauss()*.09,chin:gauss()*.08,chinY:gauss()*.07,nose:gauss()*.1,noseW:gauss()*.08,noseL:gauss()*.06,lips:gauss()*.08,cheek:gauss()*.07,brow:gauss()*.08}};
+ const hgt=p.gk?1.03+rr()*.03:1+rr()*.045,bld=.97+rr()*.08+(p.gk?.03:0),head=.95+r()*.12;
+ headMorph(root,meshes,bones,v.face);
+ // materiais
+ const skinTex=jpegTex(skinAtlas(baseData,p.tone));skinTex.name="Pele_"+root.name;
+ const skinMat=new T.MeshStandardMaterial({map:skinTex,roughness:.62,metalness:0,emissive:0x101010,name:"Pele_"+root.name});
+ const kt=p.gk?gkTexKit:kitTexOut;
+ const cloth=(nm,nmap,rough)=>new T.MeshStandardMaterial({map:kt,normalMap:nmap,normalScale:new T.Vector2(.55,.55),roughness:rough,metalness:0,emissive:0x101010,name:nm+(p.gk?"_GR":"")});
+ meshes.Cabeca.material=skinMat;meshes.Bracos.material=skinMat;meshes.Pernas.material=skinMat;
+ meshes.Camisola.material=cloth("Camisola",nCam,p.gk?.35:.78);
+ meshes.Calcoes.material=cloth("Calcoes",nCal,p.gk?.4:.8);
+ meshes.Meias.material=cloth("Meias",nCal,.85);
+ meshes.Chuteiras.material=new T.MeshStandardMaterial({map:kitTexOut,roughness:.5,metalness:.1,emissive:0x101010,name:"Chuteiras"});
+ // número das costas: desloca as UV da placa para o dígito certo
+ const nm=meshes.Numero;{const g=nm.geometry,uv=g.attributes.uv,ox=(p.n%10)*.1,oy=Math.floor(p.n/10)*.1;for(let k=0;k<uv.count;k++)uv.setXY(k,uv.getX(k)+ox,uv.getY(k)+oy);
+  nm.material=new T.MeshStandardMaterial({map:numTex,alphaTest:.5,side:T.DoubleSide,roughness:.8,metalness:0,emissive:0x101010,name:"Numero_"+p.n})}
+ // pele da cabeça rapada usa o mesmo mapa; cabelo e barba
+ buildHair(bones.Head,v);
+ // proporções e posição
+ root.scale.set(bld,hgt,bld);bones.Head.scale.setScalar(head);
+ const row=Math.floor(i/cols),col=i%cols;
+ root.position.set((col-(cols-1)/2)*dxp,0,(row-1)*dzp);
+ root.userData={numero:p.n,posicao:p.gk?"Guarda-redes":"Campo",origem:p.branco?"branco":"negro",tom_pele:p.tone,cabelo:p.hair,cor_cabelo:p.hc,barba:p.beard||"nenhuma",sobrancelha:p.brow,altura_rel:+hgt.toFixed(3)};
+ meta.push({nome:root.name,...root.userData});
+ scene.add(root);heads.push({root,bones});
+});
+
+/* ---------- animações: cada clip move os 15 esqueletos (pistas por uuid do osso) ---------- */
+const outClips=clips.map(c=>{
+ const tracks=[];
+ for(const h of heads)for(const tr of c.tracks){
+  const dot=tr.name.lastIndexOf("."),bn=tr.name.slice(0,dot),prop=tr.name.slice(dot+1),b=h.bones[bn];
+  if(!b){continue}
+  tracks.push(new tr.constructor(b.uuid+"."+prop,tr.times,tr.values,tr.getInterpolation()));
+ }
+ return new T.AnimationClip(c.name,c.duration,tracks)});
+log("jogadores "+heads.length+"; clips "+outClips.length+"; pistas/clip "+outClips[0].tracks.length);
+
+/* ---------- exportar ---------- */
+const buf=await new Promise((ok,ko)=>new GLTFExporter().parse(scene,ok,ko,{binary:true,animations:outClips,onlyVisible:false,maxTextureSize:2048}));
+log("GLB gerado: "+(buf.byteLength/1048576).toFixed(2)+" MB");
+window.__buf=buf;window.__meta=meta;
+const res=await fetch("http://localhost:8788/save",{method:"POST",body:buf});
+log("guardado: "+(await res.text()));
+
+/* ---------- verificação: reimportar o ficheiro final e mostrá-lo ---------- */
+const url=URL.createObjectURL(new Blob([buf]));
+const g2=await new Promise((ok,ko)=>new GLTFLoader().load(url,ok,undefined,ko));
+const R=new T.WebGLRenderer({antialias:true});R.setSize(innerWidth,innerHeight);R.outputColorSpace=T.SRGBColorSpace;R.setClearColor(0x2a3138);document.body.appendChild(R.domElement);
+const sc2=new T.Scene();sc2.add(new T.HemisphereLight(0xffffff,0x556070,1.5));const dl=new T.DirectionalLight(0xffffff,2.2);dl.position.set(2,5,6);sc2.add(dl);
+sc2.add(new T.Mesh(new T.PlaneGeometry(20,20).rotateX(-Math.PI/2),new T.MeshStandardMaterial({color:0x2e6b3a,roughness:1})));
+sc2.add(g2.scene);
+const cam=new T.PerspectiveCamera(32,innerWidth/innerHeight,.1,100);
+const view=Q.get("view")||"all";
+if(view==="all")cam.position.set(0,2.6,10.5),cam.lookAt(0,.95,0);
+else{const i=+view,ch=g2.scene.children[i];const p=new T.Vector3();ch.getWorldPosition(p);cam.position.set(p.x+ +(Q.get("dx")||0),+(Q.get("y")||1.6),p.z+ +(Q.get("d")||1.2));cam.lookAt(p.x,+(Q.get("ly")||1.6),p.z)}
+const mix=new T.AnimationMixer(g2.scene);const an=Q.get("anim");
+if(an){const c=g2.animations.find(a=>a.name===an);if(c){const a=mix.clipAction(c);a.play();mix.setTime(+(Q.get("t")||0))}}
+R.render(sc2,cam);
+window.__v={R,sc2,cam,g2,mix,T};window.__ready=1;log("pronto; animações no ficheiro: "+g2.animations.map(a=>a.name).join(", "));
+</script></body></html>
